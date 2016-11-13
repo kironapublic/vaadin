@@ -1,0 +1,7 @@
+ant -lib=build-libs -f gwt-files.xml unpack.gwt
+ant -lib=build-libs
+
+
+artiacts built in -
+
+result/artifacts/7.6.X.kirona/ARTIFACT-NAME/

@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+
+<!-- to use this, specify a java property for the maven settings file to use -Dmaven.settings=filename, and make sure M3_HOME is set as an environment variable OR maven.home is set as a Java property -->
+
+<project name="kironadeploy" basedir="." default="debug" >
+
+    <condition property="os.windows">
+        <os family="windows"/>
+    </condition>
+    <condition property="os.other">
+        <not>
+            <or>
+            <equals arg1="${os.windows}" arg2="true" />
+            </or>
+        </not>
+    </condition>
+	
+	<property environment="osenv" />
+	<property name="maven.home" value="${osenv.M3_HOME}" />
+	<property name="maven.settings" value="${maven.home}/conf/settings.xml" />
+	<property file="deploy.properties" />
+	<property file="../build.properties" />
+	
+	<property name="artifact.group" value="org.vaadin" />
+	
+    <property name="artifact.dir" value="${basedir}/../result/artifacts/${vaadin.version}" />
+	
+	<!-- dump some variables etc -->
+	<target name="debug">
+		<echo message="os.windows = ${os.windows}" />
+		<echo message="os.other = ${os.other}" />		
+		<echo message="maven.settings = ${maven.settings}" />
+		<echo message="maven.home = ${maven.home}" />
+		<echo message="Vaadin Build Version = ${vaadin.version}" />
+		<echo message="Artifacts in folder = ${artifact.dir}" />
+	</target>
+
+	<target name="install" depends="debug">
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-client"/>
+		</antcall>
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-client-compiled"/>
+		</antcall>		
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-client-compiler"/>
+		</antcall>		
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-push"/>
+		</antcall>	
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-server"/>
+		</antcall>		
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-shared"/>
+		</antcall>			
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-themes"/>
+		</antcall>				
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-widgets"/>
+		</antcall>
+		<antcall target="install_artifact" >
+			<param name="artifact.id" value="vaadin-uitest"/>
+		</antcall>				
+	</target>
+	
+	<target name="deploy" depends="debug">
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-client"/>
+		</antcall>
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-client-compiled"/>
+		</antcall>		
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-client-compiler"/>
+		</antcall>		
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-push"/>
+		</antcall>	
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-server"/>
+		</antcall>		
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-shared"/>
+		</antcall>			
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-themes"/>
+		</antcall>				
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-widgets"/>
+		</antcall>
+		<antcall target="deploy_artifact" >
+			<param name="artifact.id" value="vaadin-uitest"/>
+		</antcall>				
+	</target>
+			
+	<!--
+	    mvn install:install-file -Dfile=<path-to-file> -DpomFile=<pom file>
+	-->
+	<target name="install_artifact">
+		<property name="artifact.file" value="${artifact.dir}/${artifact.id}/${artifact.id}.${vaadin.version}.jar" />
+		<property name="artifact.pom" value="${artifact.dir}/${artifact.id}/${artifact.id}.${vaadin.version}.pom" />
+		<!-- <echo message="Installing artifact filename ${artifact.file}" /> -->
+		<antcall target="maven">
+			<param name="maven.command" value="install:install-file" />
+			<param name="option.1" value="-Dfile=${artifact.file}" />
+			<param name="option.2" value="-DpomFile=${artifact.pom}" />		
+		</antcall>
+	</target>
+	
+	<!--
+	    mvn deploy:deploy-file -Dfile=<path-to-file> -DpomFile=<pom file> -DrepositoryId=<some.id>
+	-->
+	<target name="deploy_artifact">
+		<property name="repository.id" value="${mvn.deploy.repo}" />
+		<property name="artifact.file" value="${artifact.dir}/${artifact.id}/${artifact.id}.${vaadin.version}.jar" />
+		<property name="artifact.pom" value="${artifact.dir}/${artifact.id}/${artifact.id}.${vaadin.version}.pom" />
+		<!-- <echo message="Installing artifact filename ${artifact.file}" /> -->
+		<antcall target="maven">
+			<param name="maven.command" value="install:install-file" />
+			<param name="option.1" value="-Dfile=${artifact.file}" />
+			<param name="option.2" value="-DpomFile=${artifact.pom}" />
+			<param name="option.3" value="-DrepositoryId=${repository.id}" />		
+		</antcall>
+	</target>
+				
+	<target name="maven">
+		<!-- some defaults -->
+		<property name="maven.command" value="clean" />
+		<property name="option.1" value="" />
+		<property name="option.2" value="" />
+		<property name="option.3" value="" />
+		<property name="option.4" value="" />
+		<property name="option.5" value="" />
+		
+		<echo message="EXECUTING MAVEN -" />
+		<echo message="${maven.home}/bin/mvn --settings ${maven.settings} ${maven.command} ${option.1} ${option.2} ${option.3} ${option.4} ${option.5}" />
+		
+		<antcall target="maven_windows" />
+		<antcall target="maven_other" />
+	</target>
+	
+	<target name="maven_windows" if="os.windows">
+		<echo message="WINDOWS COMMAND EXECUTING ..." />
+		<exec executable="cmd.exe">
+			<arg value="/c"/>
+			<arg value="${maven.home}/bin/mvn.bat"/>
+			<arg value="--settings"/>
+			<arg value="${maven.settings}"/>
+			<arg value="${maven.command}"/>
+			<arg value="${option.1}"/>
+			<arg value="${option.2}"/>
+			<arg value="${option.3}"/>
+			<arg value="${option.4}"/>
+			<arg value="${option.5}"/>
+		</exec>
+	</target>
+	
+	<target name="maven_other" if="os.other">
+		<echo message="NON WINDOWS COMMAND EXECUTING ..." />
+		<exec executable="${maven.home}/bin/mvn">
+			<arg value="--settings"/>
+			<arg value="${maven.settings}"/>
+			<arg value="${maven.command}"/>
+			<arg value="${option.1}"/>
+			<arg value="${option.2}"/>
+			<arg value="${option.3}"/>
+			<arg value="${option.4}"/>
+			<arg value="${option.5}"/>
+		</exec>		
+	</target>	
+</project>
