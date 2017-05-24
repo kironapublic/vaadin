@@ -19,7 +19,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.openqa.selenium.By;
 
-import com.vaadin.testbench.customelements.ComboBoxElement;
+import com.vaadin.testbench.elements.ComboBoxElement;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
 /**
@@ -35,10 +35,11 @@ public class ComboBoxClickIconTest extends MultiBrowserTest {
 
         $(ComboBoxElement.class).first().openPopup();
 
-        getDriver().findElements(By.className("gwt-MenuItem")).get(1).click();
+        clickElement(
+                getDriver().findElements(By.className("gwt-MenuItem")).get(1));
 
-        getDriver().findElement(By.className("v-filterselect"))
-                .findElement(By.className("v-icon")).click();
+        clickElement(getDriver().findElement(By.className("v-filterselect"))
+                .findElement(By.className("v-icon")));
 
         Assert.assertTrue("Unable to find menu items in combobox popup",
                 isElementPresent(By.className("gwt-MenuItem")));

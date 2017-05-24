@@ -320,6 +320,7 @@ public abstract class AbstractRemoteDataSource<T> implements DataSource<T> {
      * @return <code>true</code> if waiting for data; otherwise
      *         <code>false</code>
      */
+    @Override
     public boolean isWaitingForData() {
         return currentRequestCallback != null;
     }
@@ -462,7 +463,7 @@ public abstract class AbstractRemoteDataSource<T> implements DataSource<T> {
             currentRequestCallback = null;
         }
 
-        Range maxCacheRange = getMaxCacheRange();
+        Range maxCacheRange = getMaxCacheRange(received);
 
         Range[] partition = received.partitionWith(maxCacheRange);
 
@@ -579,7 +580,15 @@ public abstract class AbstractRemoteDataSource<T> implements DataSource<T> {
             Range remainsBefore = partitions[0];
             Range transposedRemainsAfter = partitions[2]
                     .offsetBy(-removedRange.length());
-            cached = remainsBefore.combineWith(transposedRemainsAfter);
+            // #8840 either can be empty if the removed range was over the
+            // cached range
+            if (remainsBefore.isEmpty()) {
+                cached = transposedRemainsAfter;
+            } else if (transposedRemainsAfter.isEmpty()) {
+                cached = remainsBefore;
+            } else {
+                cached = remainsBefore.combineWith(transposedRemainsAfter);
+            }
         } else if (removedRange.getEnd() <= cached.getStart()) {
             // Removal was before the cache. offset the cache.
             cached = cached.offsetBy(-removedRange.length());
@@ -698,9 +707,13 @@ public abstract class AbstractRemoteDataSource<T> implements DataSource<T> {
     }
 
     private Range getMaxCacheRange() {
+        return getMaxCacheRange(getRequestedAvailability());
+    }
+
+    private Range getMaxCacheRange(Range range) {
         Range availableDataRange = getAvailableRangeForCache();
-        Range maxCacheRange = cacheStrategy.getMaxCacheRange(
-                requestedAvailability, cached, availableDataRange);
+        Range maxCacheRange = cacheStrategy.getMaxCacheRange(range, cached,
+                availableDataRange);
 
         assert maxCacheRange.isSubsetOf(availableDataRange);
 
@@ -798,7 +811,7 @@ public abstract class AbstractRemoteDataSource<T> implements DataSource<T> {
     /**
      * Checks if it is possible to currently fetch data from the remote data
      * source.
-     * 
+     *
      * @return <code>true</code> if it is ok to try to fetch data,
      *         <code>false</code> if it is known that fetching data will fail
      *         and should not be tried right now.

@@ -19,7 +19,7 @@ import java.util.Comparator;
 import java.util.Objects;
 
 import com.vaadin.data.ValidationResult;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.ValueContext;
 
 /**
  * Verifies that a value is within the given range.
@@ -35,7 +35,7 @@ public class RangeValidator<T> extends AbstractValidator<T> {
     private T maxValue = null;
     private boolean minValueIncluded = true;
     private boolean maxValueIncluded = true;
-    private Comparator<? super T> comparator;
+    private final Comparator<? super T> comparator;
 
     /**
      * Creates a new range validator of the given type. Passing null to either

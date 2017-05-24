@@ -17,20 +17,19 @@ package com.vaadin.data;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.vaadin.data.Binder.Binding;
-import com.vaadin.data.ValidationStatus.Status;
-import com.vaadin.data.util.converter.Converter;
-import com.vaadin.data.util.converter.StringToIntegerConverter;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.Binder.BindingBuilder;
+import com.vaadin.data.BindingValidationStatus.Status;
+import com.vaadin.data.converter.StringToIntegerConverter;
 import com.vaadin.data.validator.EmailValidator;
 import com.vaadin.data.validator.StringLengthValidator;
 import com.vaadin.server.AbstractErrorMessage;
@@ -65,6 +64,11 @@ public class BinderBookOfVaadinTest {
             email = origin.email;
             phone = origin.phone;
             title = origin.title;
+        }
+
+        public BookPerson(String name, int yearOfBirth) {
+            lastName = name;
+            this.yearOfBirth = yearOfBirth;
         }
 
         public String getLastName() {
@@ -141,6 +145,10 @@ public class BinderBookOfVaadinTest {
         field = new TextField();
         phoneField = new TextField();
         emailField = new TextField();
+        // make sure the test is not locale dependent
+        field.setLocale(Locale.US);
+        phoneField.setLocale(Locale.US);
+        emailField.setLocale(Locale.US);
     }
 
     @Test
@@ -247,18 +255,19 @@ public class BinderBookOfVaadinTest {
     @Test
     public void converterBookOfVaadinExample1() {
         TextField yearOfBirthField = new TextField();
+        yearOfBirthField.setLocale(Locale.US);
         // Slider for integers between 1 and 10
         Slider salaryLevelField = new Slider("Salary level", 1, 10);
 
-        Binding<BookPerson, String, String> b1 = binder
+        BindingBuilder<BookPerson, String> b1 = binder
                 .forField(yearOfBirthField);
-        Binding<BookPerson, String, Integer> b2 = b1.withConverter(
+        BindingBuilder<BookPerson, Integer> b2 = b1.withConverter(
                 new StringToIntegerConverter("Must enter a number"));
         b2.bind(BookPerson::getYearOfBirth, BookPerson::setYearOfBirth);
 
-        Binding<BookPerson, Double, Double> salaryBinding1 = binder
+        BindingBuilder<BookPerson, Double> salaryBinding1 = binder
                 .forField(salaryLevelField);
-        Binding<BookPerson, Double, Integer> salaryBinding2 = salaryBinding1
+        BindingBuilder<BookPerson, Integer> salaryBinding2 = salaryBinding1
                 .withConverter(Double::intValue, Integer::doubleValue);
         salaryBinding2.bind(BookPerson::getSalaryLevel,
                 BookPerson::setSalaryLevel);
@@ -306,13 +315,13 @@ public class BinderBookOfVaadinTest {
         DateField departing = new DateField("Departing");
         DateField returning = new DateField("Returning");
 
-        Binding<Trip, LocalDate, LocalDate> returnBinding = binder
-                .forField(returning).withValidator(
+        Binding<Trip, LocalDate> returnBinding = binder.forField(returning)
+                .withValidator(
                         returnDate -> !returnDate
                                 .isBefore(departing.getValue()),
-                        "Cannot return before departing");
+                        "Cannot return before departing")
+                .bind(Trip::getReturnDate, Trip::setReturnDate);
 
-        returnBinding.bind(Trip::getReturnDate, Trip::setReturnDate);
         departing.addValueChangeListener(event -> returnBinding.validate());
 
         LocalDate past = LocalDate.now();
@@ -359,13 +368,13 @@ public class BinderBookOfVaadinTest {
         DateField departing = new DateField("Departing");
         DateField returning = new DateField("Returning");
 
-        Binding<Trip, LocalDate, LocalDate> returnBinding = binder
-                .forField(returning).withValidator(
+        Binding<Trip, LocalDate> returnBinding = binder.forField(returning)
+                .withValidator(
                         returnDate -> !returnDate
                                 .isBefore(departing.getValue()),
-                        "Cannot return before departing");
+                        "Cannot return before departing")
+                .bind(Trip::getReturnDate, Trip::setReturnDate);
 
-        returnBinding.bind(Trip::getReturnDate, Trip::setReturnDate);
         departing.addValueChangeListener(event -> returnBinding.validate());
 
         LocalDate past = LocalDate.now();
@@ -375,7 +384,7 @@ public class BinderBookOfVaadinTest {
         departing.setValue(before);
         returning.setValue(after);
 
-        ValidationStatus<LocalDate> result = returnBinding.validate();
+        BindingValidationStatus<LocalDate> result = returnBinding.validate();
         Assert.assertFalse(result.isError());
         Assert.assertNull(departing.getComponentError());
 
@@ -426,7 +435,7 @@ public class BinderBookOfVaadinTest {
     @Test
     public void withBindingStatusHandlerExample() {
         Label nameStatus = new Label();
-        AtomicReference<ValidationStatus<?>> statusCapture = new AtomicReference<>();
+        AtomicReference<BindingValidationStatus<?>> statusCapture = new AtomicReference<>();
 
         String msg = "Full name must contain at least three characters";
         binder.forField(field).withValidator(name -> name.length() >= 3, msg)
@@ -444,7 +453,7 @@ public class BinderBookOfVaadinTest {
         Assert.assertTrue(nameStatus.isVisible());
         Assert.assertEquals(msg, nameStatus.getValue());
         Assert.assertNotNull(statusCapture.get());
-        ValidationStatus<?> status = statusCapture.get();
+        BindingValidationStatus<?> status = statusCapture.get();
         Assert.assertEquals(Status.ERROR, status.getStatus());
         Assert.assertEquals(msg, status.getMessage().get());
         Assert.assertEquals(field, status.getField());
@@ -463,7 +472,7 @@ public class BinderBookOfVaadinTest {
 
     @Test
     public void binder_saveIfValid() {
-        BeanBinder<BookPerson> binder = new BeanBinder<>(BookPerson.class);
+        Binder<BookPerson> binder = new Binder<>(BookPerson.class);
 
         // Phone or email has to be specified for the bean
         Validator<BookPerson> phoneOrEmail = Validator.from(
@@ -587,7 +596,7 @@ public class BinderBookOfVaadinTest {
     public void withBinderStatusLabelExample() {
         Label formStatusLabel = new Label();
 
-        BeanBinder<BookPerson> binder = new BeanBinder<>(BookPerson.class);
+        Binder<BookPerson> binder = new Binder<>(BookPerson.class);
 
         binder.setStatusLabel(formStatusLabel);
 
@@ -609,9 +618,8 @@ public class BinderBookOfVaadinTest {
         BinderValidationStatus<?> status = binder.validate();
         Assert.assertEquals(0, status.getFieldValidationErrors().size());
         Assert.assertEquals(1, status.getBeanValidationErrors().size());
-        Assert.assertEquals(
-                status.getBeanValidationErrors().get(0).getErrorMessage(),
-                message);
+        Assert.assertEquals(message,
+                status.getBeanValidationErrors().get(0).getErrorMessage());
 
         Assert.assertEquals(message, formStatusLabel.getValue());
 
@@ -639,7 +647,7 @@ public class BinderBookOfVaadinTest {
     public void withBinderStatusHandlerExample() {
         Label formStatusLabel = new Label();
 
-        BinderValidationStatusHandler defaultHandler = binder
+        BinderValidationStatusHandler<BookPerson> defaultHandler = binder
                 .getValidationStatusHandler();
 
         binder.setValidationStatusHandler(status -> {
@@ -653,7 +661,7 @@ public class BinderBookOfVaadinTest {
             formStatusLabel.setVisible(!errorMessage.isEmpty());
 
             // Let the default handler show messages for each field
-            defaultHandler.accept(status);
+            defaultHandler.statusChange(status);
         });
 
         final String bindingMessage = "uneven";
@@ -714,7 +722,6 @@ public class BinderBookOfVaadinTest {
     }
 
     @Test
-    @Ignore
     public void statusChangeListener_binderIsNotBound() {
         Button saveButton = new Button();
         Button resetButton = new Button();
@@ -722,7 +729,7 @@ public class BinderBookOfVaadinTest {
         AtomicBoolean eventIsFired = new AtomicBoolean(false);
 
         binder.addStatusChangeListener(event -> {
-            boolean isValid = !event.hasValidationErrors();
+            boolean isValid = event.getBinder().isValid();
             boolean hasChanges = event.getBinder().hasChanges();
             eventIsFired.set(true);
 
@@ -780,7 +787,7 @@ public class BinderBookOfVaadinTest {
         AtomicBoolean eventIsFired = new AtomicBoolean(false);
 
         binder.addStatusChangeListener(event -> {
-            boolean isValid = !event.hasValidationErrors();
+            boolean isValid = event.getBinder().isValid();
             boolean hasChanges = event.getBinder().hasChanges();
             eventIsFired.set(true);
 
@@ -804,8 +811,6 @@ public class BinderBookOfVaadinTest {
 
         field.setValue("a");
         // there are valid changes
-        Assert.assertTrue(saveButton.isEnabled());
-        Assert.assertTrue(resetButton.isEnabled());
         verifyEventIsFired(eventIsFired);
 
         field.setValue("");
@@ -822,6 +827,56 @@ public class BinderBookOfVaadinTest {
         Assert.assertFalse(saveButton.isEnabled());
         Assert.assertFalse(resetButton.isEnabled());
         verifyEventIsFired(eventIsFired);
+    }
+
+    @Test
+    public void statusChangeListener_multipleRequiredFields() {
+        Button saveButton = new Button();
+
+        binder.addStatusChangeListener(event -> {
+            boolean isValid = event.getBinder().isValid();
+            boolean hasChanges = event.getBinder().hasChanges();
+
+            saveButton.setEnabled(hasChanges && isValid);
+        });
+
+        binder.forField(field).asRequired("").bind(BookPerson::getLastName,
+                BookPerson::setLastName);
+        binder.forField(emailField).asRequired("").bind(BookPerson::getEmail,
+                BookPerson::setEmail);
+
+        Assert.assertFalse(saveButton.isEnabled());
+        field.setValue("not empty");
+        Assert.assertFalse(saveButton.isEnabled());
+        emailField.setValue("not empty");
+        Assert.assertTrue(saveButton.isEnabled());
+        field.clear();
+        Assert.assertFalse(saveButton.isEnabled());
+    }
+
+    @Test
+    public void writeBean_throwsValidationException_bookExampleShouldCompile() {
+        // The person to edit
+        // Would be loaded from the backend in a real application
+        BookPerson person = new BookPerson("John Doe", 1957);
+
+        // Updates the value in each bound field component
+        binder.readBean(person);
+
+        Button saveButton = new Button("Save", event -> {
+            try {
+                binder.writeBean(person);
+                // A real application would also save the updated person
+                // using the application's backend
+            } catch (ValidationException e) {
+                Notification.show("Person could not be saved, "
+                        + "please check error messages for each field.");
+            }
+        });
+
+        // Updates the fields again with the previously saved values
+        Button resetButton = new Button("Reset",
+                event -> binder.readBean(person));
     }
 
     private void verifyEventIsFired(AtomicBoolean flag) {

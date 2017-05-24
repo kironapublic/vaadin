@@ -11,9 +11,7 @@ import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinSession;
 import com.vaadin.tests.util.AlwaysLockedVaadinSession;
 import com.vaadin.ui.HasComponents.ComponentAttachEvent;
-import com.vaadin.ui.HasComponents.ComponentAttachListener;
 import com.vaadin.ui.HasComponents.ComponentDetachEvent;
-import com.vaadin.ui.HasComponents.ComponentDetachListener;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
@@ -21,7 +19,7 @@ import com.vaadin.ui.Window;
 
 public class AttachDetachWindowTest {
 
-    private VaadinSession testApp = new AlwaysLockedVaadinSession(null);
+    private final VaadinSession testApp = new AlwaysLockedVaadinSession(null);
 
     private interface TestContainer {
         public boolean attachCalled();
@@ -36,7 +34,7 @@ public class AttachDetachWindowTest {
     private class TestWindow extends Window implements TestContainer {
         boolean windowAttachCalled = false;
         boolean windowDetachCalled = false;
-        private TestContent testContent = new TestContent();
+        private final TestContent testContent = new TestContent();
 
         TestWindow() {
             setContent(testContent);
@@ -81,7 +79,7 @@ public class AttachDetachWindowTest {
         boolean contentAttachCalled = false;
         boolean childAttachCalled = false;
 
-        private Label child = new Label() {
+        private final Label child = new Label() {
             @Override
             public void attach() {
                 super.attach();
@@ -115,7 +113,7 @@ public class AttachDetachWindowTest {
     private class TestUI extends UI implements TestContainer {
         boolean rootAttachCalled = false;
         boolean rootDetachCalled = false;
-        private TestContent testContent = new TestContent();
+        private final TestContent testContent = new TestContent();
 
         public TestUI() {
             setContent(testContent);
@@ -224,13 +222,8 @@ public class AttachDetachWindowTest {
         final Window window = new Window();
 
         final boolean[] eventFired = new boolean[1];
-        ui.addComponentAttachListener(new ComponentAttachListener() {
-
-            @Override
-            public void componentAttachedToContainer(
-                    ComponentAttachEvent event) {
-                eventFired[0] = event.getAttachedComponent().equals(window);
-            }
+        ui.addComponentAttachListener((ComponentAttachEvent event) -> {
+            eventFired[0] = event.getAttachedComponent().equals(window);
         });
         ui.addWindow(window);
         Assert.assertTrue("Attach event is not fired for added window",
@@ -243,13 +236,8 @@ public class AttachDetachWindowTest {
         final Window window = new Window();
 
         final boolean[] eventFired = new boolean[1];
-        ui.addComponentDetachListener(new ComponentDetachListener() {
-
-            @Override
-            public void componentDetachedFromContainer(
-                    ComponentDetachEvent event) {
-                eventFired[0] = event.getDetachedComponent().equals(window);
-            }
+        ui.addComponentDetachListener((ComponentDetachEvent event) -> {
+            eventFired[0] = event.getDetachedComponent().equals(window);
         });
         ui.addWindow(window);
         ui.removeWindow(window);

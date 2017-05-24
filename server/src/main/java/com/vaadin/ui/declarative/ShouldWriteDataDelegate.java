@@ -28,19 +28,16 @@ import com.vaadin.ui.Component;
  * @since 7.5.0
  * @author Vaadin Ltd
  */
+@FunctionalInterface
 public interface ShouldWriteDataDelegate extends Serializable {
 
     /**
      * The default delegate implementation that assumes that all component data
-     * is provided by a data source connected to a back end system and that the
-     * data should thus not be written.
+     * is provided by a data provider connected to a back end system and that
+     * the data should thus not be written.
      */
-    public static final ShouldWriteDataDelegate DEFAULT = new ShouldWriteDataDelegate() {
-        @Override
-        public boolean shouldWriteData(Component component) {
-            return false;
-        }
-    };
+    public static final ShouldWriteDataDelegate DEFAULT = (
+            Component component) -> false;
 
     /**
      * Determines whether the container data of a component should be written

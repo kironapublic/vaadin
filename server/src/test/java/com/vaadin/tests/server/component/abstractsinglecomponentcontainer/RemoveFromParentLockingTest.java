@@ -47,19 +47,21 @@ public class RemoveFromParentLockingTest {
         };
 
         session.getLockInstance().lock();
+        try {
+            UI ui = new UI() {
+                @Override
+                protected void init(VaadinRequest request) {
+                }
+            };
+            ui.setSession(session);
 
-        UI ui = new UI() {
-            @Override
-            protected void init(VaadinRequest request) {
-            }
-        };
-        ui.setSession(session);
+            VerticalLayout layout = new VerticalLayout();
+            ui.setContent(layout);
+            return layout;
+        } finally {
+            session.getLockInstance().unlock();
+        }
 
-        VerticalLayout layout = new VerticalLayout();
-        ui.setContent(layout);
-
-        session.getLockInstance().unlock();
-        return layout;
     }
 
     @Test

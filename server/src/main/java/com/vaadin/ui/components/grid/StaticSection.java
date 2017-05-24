@@ -19,10 +19,21 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import com.vaadin.shared.ui.grid.GridStaticCellType;
 import com.vaadin.shared.ui.grid.SectionState;
@@ -31,6 +42,10 @@ import com.vaadin.shared.ui.grid.SectionState.RowState;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.Column;
+import com.vaadin.ui.declarative.DesignAttributeHandler;
+import com.vaadin.ui.declarative.DesignContext;
+import com.vaadin.ui.declarative.DesignException;
+import com.vaadin.ui.declarative.DesignFormatter;
 
 /**
  * Represents the header or footer section of a Grid.
@@ -56,7 +71,7 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
 
         private final RowState rowState = new RowState();
         private final StaticSection<?> section;
-        private final Map<Object, CELL> cells = new LinkedHashMap<>();
+        private final Map<String, CELL> cells = new LinkedHashMap<>();
 
         /**
          * Creates a new row belonging to the given section.
@@ -83,16 +98,45 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
         protected abstract String getCellTagName();
 
         /**
-         * Adds a cell to this section, corresponding to the given column id.
+         * Adds a cell to this section, corresponding to the given user-defined
+         * column id.
          *
          * @param columnId
          *            the id of the column for which to add a cell
          */
         protected void addCell(String columnId) {
+            Column<?, ?> column = section.getGrid().getColumn(columnId);
+            Objects.requireNonNull(column,
+                    "No column matching given identifier");
+            addCell(column);
+        }
+
+        /**
+         * Adds a cell to this section for given column.
+         *
+         * @param column
+         *            the column for which to add a cell
+         */
+        protected void addCell(Column<?, ?> column) {
+            if (!section.getGrid().getColumns().contains(column)) {
+                throw new IllegalArgumentException(
+                        "Given column does not exist in this Grid");
+            }
+            internalAddCell(section.getInternalIdForColumn(column));
+        }
+
+        /**
+         * Adds a cell to this section, corresponding to the given internal
+         * column id.
+         *
+         * @param internalId
+         *            the internal id of the column for which to add a cell
+         */
+        protected void internalAddCell(String internalId) {
             CELL cell = createCell();
-            cell.setColumnId(columnId);
-            cells.put(columnId, cell);
-            rowState.cells.put(columnId, cell.getCellState());
+            cell.setColumnId(internalId);
+            cells.put(internalId, cell);
+            rowState.cells.put(internalId, cell.getCellState());
         }
 
         /**
@@ -102,10 +146,19 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
          * @param columnId
          *            the id of the column from which to remove the cell
          */
-        protected void removeCell(Object columnId) {
+        protected void removeCell(String columnId) {
             CELL cell = cells.remove(columnId);
             if (cell != null) {
-                rowState.cells.remove(cell.getCellState());
+                rowState.cells.remove(columnId);
+                for (Iterator<Set<String>> iterator = rowState.cellGroups
+                        .values().iterator(); iterator.hasNext();) {
+                    Set<String> group = iterator.next();
+                    group.remove(columnId);
+                    if (group.size() < 2) {
+                        iterator.remove();
+                    }
+                }
+                cell.detach();
             }
         }
 
@@ -122,6 +175,8 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
          * Returns the cell in this section that corresponds to the given column
          * id.
          *
+         * @see Column#setId(String)
+         *
          * @param columnId
          *            the id of the column
          * @return the cell for the given column
@@ -130,18 +185,249 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
          *             if no cell was found for the column id
          */
         public CELL getCell(String columnId) {
-            CELL cell = cells.get(columnId);
+            Column<?, ?> column = section.getGrid().getColumn(columnId);
+            Objects.requireNonNull(column,
+                    "No column matching given identifier");
+            return getCell(column);
+        }
+
+        /**
+         * Returns the cell in this section that corresponds to the given
+         * column.
+         *
+         * @param column
+         *            the column
+         * @return the cell for the given column
+         *
+         * @throws IllegalArgumentException
+         *             if no cell was found for the column
+         */
+        public CELL getCell(Column<?, ?> column) {
+            return internalGetCell(section.getInternalIdForColumn(column));
+        }
+
+        /**
+         * Returns the custom style name for this row.
+         *
+         * @return the style name or null if no style name has been set
+         */
+        public String getStyleName() {
+            return getRowState().styleName;
+        }
+
+        /**
+         * Sets a custom style name for this row.
+         *
+         * @param styleName
+         *            the style name to set or null to not use any style name
+         */
+        public void setStyleName(String styleName) {
+            getRowState().styleName = styleName;
+        }
+
+        /**
+         * Returns the cell in this section that corresponds to the given
+         * internal column id.
+         *
+         * @param internalId
+         *            the internal id of the column
+         * @return the cell for the given column
+         *
+         * @throws IllegalArgumentException
+         *             if no cell was found for the column id
+         */
+        protected CELL internalGetCell(String internalId) {
+            CELL cell = cells.get(internalId);
             if (cell == null) {
                 throw new IllegalArgumentException(
-                        "No cell found for column id " + columnId);
+                        "No cell found for column id " + internalId);
             }
             return cell;
+        }
+
+        /**
+         * Reads the declarative design from the given table row element.
+         *
+         * @since 7.5.0
+         * @param trElement
+         *            Element to read design from
+         * @param designContext
+         *            the design context
+         * @throws DesignException
+         *             if the given table row contains unexpected children
+         */
+        protected void readDesign(Element trElement,
+                DesignContext designContext) throws DesignException {
+            Elements cellElements = trElement.children();
+            for (int i = 0; i < cellElements.size(); i++) {
+                Element element = cellElements.get(i);
+                if (!element.tagName().equals(getCellTagName())) {
+                    throw new DesignException(
+                            "Unexpected element in tr while expecting "
+                                    + getCellTagName() + ": "
+                                    + element.tagName());
+                }
+
+                int colspan = DesignAttributeHandler.readAttribute("colspan",
+                        element.attributes(), 1, int.class);
+
+                String columnIdsString = DesignAttributeHandler.readAttribute(
+                        "column-ids", element.attributes(), "", String.class);
+                if (columnIdsString.trim().isEmpty()) {
+                    throw new DesignException(
+                            "Unexpected 'column-ids' attribute value '"
+                                    + columnIdsString
+                                    + "'. It cannot be empty and must "
+                                    + "be comma separated column identifiers");
+                }
+                String[] columnIds = columnIdsString.split(",");
+                if (columnIds.length != colspan) {
+                    throw new DesignException(
+                            "Unexpected 'colspan' attribute value '" + colspan
+                                    + "' whereas there is " + columnIds.length
+                                    + " column identifiers specified : '"
+                                    + columnIdsString + "'");
+                }
+
+                Stream.of(columnIds).forEach(this::addCell);
+
+                Stream<String> idsStream = Stream.of(columnIds);
+                if (colspan > 1) {
+                    CELL newCell = createCell();
+                    addMergedCell(createCell(),
+                            idsStream.collect(Collectors.toSet()));
+                    newCell.readDesign(element, designContext);
+                } else {
+                    idsStream.map(this::getCell).forEach(
+                            cell -> cell.readDesign(element, designContext));
+                }
+            }
+        }
+
+        /**
+         * Writes the declarative design to the given table row element.
+         *
+         * @since 7.5.0
+         * @param trElement
+         *            Element to write design to
+         * @param designContext
+         *            the design context
+         */
+        protected void writeDesign(Element trElement,
+                DesignContext designContext) {
+            Set<String> visited = new HashSet<>();
+            for (Entry<String, CELL> entry : cells.entrySet()) {
+                if (visited.contains(entry.getKey())) {
+                    continue;
+                }
+                visited.add(entry.getKey());
+
+                Element cellElement = trElement.appendElement(getCellTagName());
+
+                Optional<Entry<CellState, Set<String>>> groupCell = getRowState().cellGroups
+                        .entrySet().stream().filter(groupEntry -> groupEntry
+                                .getValue().contains(entry.getKey()))
+                        .findFirst();
+                Stream<String> columnIds = Stream.of(entry.getKey());
+
+                if (groupCell.isPresent()) {
+                    Set<String> orderedSet = new LinkedHashSet<>(
+                            cells.keySet());
+                    orderedSet.retainAll(groupCell.get().getValue());
+                    columnIds = orderedSet.stream();
+                    visited.addAll(orderedSet);
+                    cellElement.attr("colspan", "" + orderedSet.size());
+                    writeCellState(cellElement, designContext,
+                            groupCell.get().getKey());
+                } else {
+                    writeCellState(cellElement, designContext,
+                            entry.getValue().getCellState());
+                }
+                cellElement.attr("column-ids",
+                        columnIds.map(section::getColumnByInternalId)
+                                .map(Column::getId)
+                                .collect(Collectors.joining(",")));
+            }
+        }
+
+        /**
+         *
+         * Writes declarative design for the cell using its {@code state} to the
+         * given table cell element.
+         * <p>
+         * The method is used instead of StaticCell::writeDesign because
+         * sometimes there is no a reference to the cell which should be written
+         * (merged cell) but only its state is available (the cell is virtual
+         * and is not stored).
+         *
+         * @param cellElement
+         *            Element to write design to
+         * @param context
+         *            the design context
+         * @param state
+         *            a cell state
+         */
+        protected void writeCellState(Element cellElement,
+                DesignContext context, CellState state) {
+            switch (state.type) {
+            case TEXT:
+                cellElement.attr("plain-text", true);
+                cellElement
+                        .appendText(Optional.ofNullable(state.text).orElse(""));
+                break;
+            case HTML:
+                cellElement.append(Optional.ofNullable(state.html).orElse(""));
+                break;
+            case WIDGET:
+                cellElement.appendChild(
+                        context.createElement((Component) state.connector));
+                break;
+            }
         }
 
         void detach() {
             for (CELL cell : cells.values()) {
                 cell.detach();
             }
+            for (CellState cellState : rowState.cellGroups.keySet()) {
+                if (cellState.type == GridStaticCellType.WIDGET
+                        && cellState.connector != null) {
+                    ((Component) cellState.connector).setParent(null);
+                    cellState.connector = null;
+                }
+            }
+        }
+
+        void checkIfAlreadyMerged(String columnId) {
+            for (Set<String> cellGroup : getRowState().cellGroups.values()) {
+                if (cellGroup.contains(columnId)) {
+                    throw new IllegalArgumentException(
+                            "Cell " + columnId + " is already merged");
+                }
+            }
+            if (!cells.containsKey(columnId)) {
+                throw new IllegalArgumentException(
+                        "Cell " + columnId + " does not exist on this row");
+            }
+        }
+
+        void addMergedCell(CELL newCell, Set<String> columnGroup) {
+            rowState.cellGroups.put(newCell.getCellState(), columnGroup);
+        }
+
+        public Collection<? extends Component> getComponents() {
+            List<Component> components = new ArrayList<>();
+            cells.forEach((id, cell) -> {
+                if (cell.getCellType() == GridStaticCellType.WIDGET) {
+                    components.add(cell.getComponent());
+                }
+            });
+            rowState.cellGroups.forEach((cellState, columnIds) -> {
+                if (cellState.connector != null) {
+                    components.add((Component) cellState.connector);
+                }
+            });
+            return components;
         }
     }
 
@@ -150,8 +436,8 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
      */
     abstract static class StaticCell implements Serializable {
 
-        private CellState cellState = new CellState();
-        private StaticRow<?> row;
+        private final CellState cellState = new CellState();
+        private final StaticRow<?> row;
 
         protected StaticCell(StaticRow<?> row) {
             this.row = row;
@@ -161,7 +447,7 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
             cellState.columnId = id;
         }
 
-        String getColumnId() {
+        public String getColumnId() {
             return cellState.columnId;
         }
 
@@ -273,6 +559,51 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
             return cellState.type;
         }
 
+        /**
+         * Returns the custom style name for this cell.
+         *
+         * @return the style name or null if no style name has been set
+         */
+        public String getStyleName() {
+            return cellState.styleName;
+        }
+
+        /**
+         * Sets a custom style name for this cell.
+         *
+         * @param styleName
+         *            the style name to set or null to not use any style name
+         */
+        public void setStyleName(String styleName) {
+            cellState.styleName = styleName;
+            row.section.markAsDirty();
+        }
+
+        /**
+         * Reads the declarative design from the given table cell element.
+         *
+         * @since 7.5.0
+         * @param cellElement
+         *            Element to read design from
+         * @param designContext
+         *            the design context
+         */
+        protected void readDesign(Element cellElement,
+                DesignContext designContext) {
+            if (!cellElement.hasAttr("plain-text")) {
+                if (cellElement.children().size() > 0
+                        && cellElement.child(0).tagName().contains("-")) {
+                    setComponent(
+                            designContext.readDesign(cellElement.child(0)));
+                } else {
+                    setHtml(cellElement.html());
+                }
+            } else {
+                // text – need to unescape HTML entities
+                setText(DesignFormatter.decodeFromTextNode(cellElement.html()));
+            }
+        }
+
         private void removeComponentIfPresent() {
             Component component = (Component) cellState.connector;
             if (component != null) {
@@ -307,7 +638,9 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
 
     protected abstract Grid<?> getGrid();
 
-    protected abstract Collection<? extends Column<?, ?>> getColumns();
+    protected abstract Column<?, ?> getColumnByInternalId(String internalId);
+
+    protected abstract String getInternalIdForColumn(Column<?, ?> column);
 
     /**
      * Marks the state of this section as modified.
@@ -330,7 +663,7 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
         rows.add(index, row);
         getState(true).rows.add(index, row.getRowState());
 
-        getColumns().stream().forEach(column -> row.addCell(column.getId()));
+        getGrid().getColumns().stream().forEach(row::addCell);
 
         return row;
     }
@@ -397,7 +730,7 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
      */
     public void addColumn(String columnId) {
         for (ROW row : rows) {
-            row.addCell(columnId);
+            row.internalAddCell(columnId);
         }
     }
 
@@ -411,6 +744,49 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
         for (ROW row : rows) {
             row.removeCell(columnId);
         }
+        markAsDirty();
+    }
+
+    /**
+     * Writes the declarative design to the given table section element.
+     *
+     * @param tableSectionElement
+     *            Element to write design to
+     * @param designContext
+     *            the design context
+     */
+    public void writeDesign(Element tableSectionElement,
+            DesignContext designContext) {
+        for (ROW row : getRows()) {
+            Element tr = tableSectionElement.appendElement("tr");
+            row.writeDesign(tr, designContext);
+        }
+    }
+
+    /**
+     * Reads the declarative design from the given table section element.
+     *
+     * @since 7.5.0
+     * @param tableSectionElement
+     *            Element to read design from
+     * @param designContext
+     *            the design context
+     * @throws DesignException
+     *             if the table section contains unexpected children
+     */
+    public void readDesign(Element tableSectionElement,
+            DesignContext designContext) throws DesignException {
+        while (getRowCount() > 0) {
+            removeRow(0);
+        }
+
+        for (Element row : tableSectionElement.children()) {
+            if (!row.tagName().equals("tr")) {
+                throw new DesignException("Unexpected element in "
+                        + tableSectionElement.tagName() + ": " + row.tagName());
+            }
+            addRowAt(getRowCount()).readDesign(row, designContext);
+        }
     }
 
     /**
@@ -421,4 +797,5 @@ public abstract class StaticSection<ROW extends StaticSection.StaticRow<?>>
     protected List<ROW> getRows() {
         return Collections.unmodifiableList(rows);
     }
+
 }

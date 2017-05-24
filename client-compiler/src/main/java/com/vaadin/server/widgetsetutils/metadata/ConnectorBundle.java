@@ -48,6 +48,7 @@ import com.vaadin.client.communication.JSONSerializer;
 import com.vaadin.client.connectors.AbstractRendererConnector;
 import com.vaadin.client.metadata.TypeDataStore.MethodAttribute;
 import com.vaadin.client.ui.UnknownComponentConnector;
+import com.vaadin.client.ui.UnknownExtensionConnector;
 import com.vaadin.shared.communication.ClientRpc;
 import com.vaadin.shared.communication.ServerRpc;
 import com.vaadin.shared.ui.Connect;
@@ -469,7 +470,9 @@ public class ConnectorBundle {
     private static boolean isConnected(JClassType type) {
         return type.isAnnotationPresent(Connect.class)
                 || type.getQualifiedSourceName().equals(
-                        UnknownComponentConnector.class.getCanonicalName());
+                        UnknownComponentConnector.class.getCanonicalName())
+                || type.getQualifiedSourceName().equals(
+                        UnknownExtensionConnector.class.getCanonicalName());
     }
 
     public static boolean isConnectedComponentConnector(JClassType type) {
@@ -595,16 +598,14 @@ public class ConnectorBundle {
             Map<JMethod, Set<MethodAttribute>> typeData = methodAttributes
                     .get(type);
             if (typeData == null) {
-                typeData = new TreeMap<>(
-                        jMethodComparator);
+                typeData = new TreeMap<>(jMethodComparator);
                 methodAttributes.put(type, typeData);
             }
 
             Map<JMethod, Set<MethodAttribute>> methods = methodAttributes
                     .get(type);
             if (methods == null) {
-                methods = new TreeMap<>(
-                        jMethodComparator);
+                methods = new TreeMap<>(jMethodComparator);
                 methodAttributes.put(type, methods);
             }
 

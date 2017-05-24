@@ -15,13 +15,14 @@
  */
 package com.vaadin.client.connectors;
 
-import com.google.web.bindery.event.shared.HandlerRegistration;
+import com.google.gwt.event.shared.HandlerRegistration;
 import com.vaadin.client.communication.JsonDecoder;
 import com.vaadin.client.metadata.TypeDataStore;
 import com.vaadin.client.renderers.ClickableRenderer.RendererClickHandler;
 import com.vaadin.client.renderers.ImageRenderer;
 import com.vaadin.shared.communication.URLReference;
 import com.vaadin.shared.ui.Connect;
+import com.vaadin.shared.ui.grid.renderers.ImageRendererState;
 
 import elemental.json.JsonObject;
 import elemental.json.JsonValue;
@@ -53,5 +54,10 @@ public class ImageRendererConnector extends ClickableRendererConnector<String> {
     protected HandlerRegistration addClickHandler(
             RendererClickHandler<JsonObject> handler) {
         return getRenderer().addClickHandler(handler);
+    }
+
+    @Override
+    public ImageRendererState getState() {
+        return (ImageRendererState) super.getState();
     }
 }

@@ -36,55 +36,65 @@
         <h2 id="tableofcontents">Release Notes for Vaadin Framework
             @version@</h2>
         <ul>
-            <li><a href="#overview">Overview of Vaadin
-                    @version@ Release</a></li>
-            <li><a href="#changelog">Change Log for Vaadin
+            <li><a href="#overview">Overview of Vaadin Framework
+                    @version@ release</a></li>
+            <li><a href="#changelog">Change Log for Vaadin Framework
                     @version@</a></li>
-            <li><a href="#enhancements">Enhancements in Vaadin
+            <li><a href="#enhancements">Enhancements in Vaadin Framework
                     @version-minor@</a></li>
             <li><a href="#incompatible">Incompatible or Behavior-altering Changes in
                     @version-minor@</a></li>
             <li><a href="#knownissues">Known Issues and Limitations</a></li>
-            <li><a href="#vaadin">Vaadin Installation</a></li>
+            <li><a href="#starting">Getting started with Vaadin Framework</a></li>
             <li><a href="#package">Package Contents</a></li>
             <li><a href="#migrating">Migrating from Vaadin 7.7</a></li>
-            <li><a href="#dependencies">Vaadin @version@
+            <li><a href="#dependencies">Vaadin Framework @version@
                     dependencies</a></li>
             <li><a href="#supportedversions">Supported
                     Technologies</a></li>
-            <li><a href="#vaadinontheweb">Vaadin on the Web</a></li>
+            <li><a href="#vaadinontheweb">Vaadin Framework on the Web</a></li>
         </ul>
 
-        <h2 id="overview">Overview of Vaadin @version@ Release</h2>
+        <h2 id="overview">Overview of Vaadin Framework @version@ Release</h2>
 
         <p>
-            Vaadin @version@ is a
-<!--            feature release that includes -->
-            pre-release for evaluating
-            a number of new features and bug fixes, as listed in the <a
-                href="#enhancements">list of enhancements</a> and <a
-                href="#changelog">change log</a> below.
+            Vaadin Framework @version@ is a
+            maintenance release that includes a number of bug fixes, as listed in the <a href="#changelog">change log</a> below.
+            <!-- feature release that includes -->
+            <!-- pre-release for evaluating  -->
+            <!-- a number of new features and bug fixes, as listed in the -->
+            <!-- <a href="#enhancements">list of enhancements</a> and <a href="#changelog">change log</a> below. -->
+        <!-- 
+		This beta release contains breaking changes based on your feedback on the previous beta version,
+		and we may change things on future beta versions based on your feedback if necessary.
+         -->
+	</p>
+	<p>	Special note for add-on developers: please test your add-on against 
+		Framework 8.0 and update your add-on as needed.
+		
         </p>
 
         <!-- ================================================================ -->
-        <h3 id="changelog">Change Log for Vaadin @version@</h3>
-	<!-- @release-notes-changelog@ -->
+        <h3 id="changelog">Change Log for Vaadin Framework @version@</h3>
         <p>
             You can find the full list of all changes <a
-                href="https://github.com/vaadin/vaadin/releases/tag/@version@">in
+                href="https://github.com/vaadin/framework/releases/tag/@version@">in	
                 GitHub</a>.
         </p>
 
-        <h2 id="enhancements">Enhancements in Vaadin @version-minor@</h2>
+        <h2 id="enhancements">Enhancements in Vaadin Framework @version-minor@</h2>
 
-        <p>Vaadin @version-minor@ includes many major and minor
+        <p>Vaadin Framework @version-minor@ includes many major and minor
             enhancements. Below is a list of the most notable changes:</p>
 
         <ul>
             <li>New, simpler data binding API</li>
-            <li>Vaadin is now based on Java 8</li>
-            <li>Vaadin is using GWT 2.8, allowing client side code to use Java 8</li>
-            <li>Other Vaadin dependencies including Atmosphere have been upgraded</li>
+            <li>Vaadin Framework is now based on Java 8</li>
+            <li>Vaadin Framework is using GWT 2.8, allowing client side code to use Java 8</li>
+            <li>Other Framework dependencies including Atmosphere have been upgraded</li>
+            <li>Easier to integrate web components using HTML imports (<tt>@HtmlImport</tt>), custom tag name support for <tt>AbstractJavaScriptComponent</tt> and more efficient transmission of shared state changes for JavaScript components</li>
+            <li>Context click events are now generated on iOS devices (<a href="https://github.com/vaadin/framework/issues/7387">#7387</a>)</li>
+            <li>Add-ons can use <tt>META-INF/services/com.vaadin.server.VaadinServiceInitListener</tt> to automatically hook into the initialization sequence of the framework</li>
         </ul>
 
         <p>
@@ -93,46 +103,148 @@
             Also components using those are replaced with updated implementations using the
             new API, and the old data binding API and components have been moved to separate
             compatibility packages for ease of migration.
-            For more details, see the Book of Vaadin and <a href="#migrating">how to migrate
-            to Vaadin 8</a>.
+            For more details, see <a href="#incompatible">the list of incompatible changes</a> and <a href="#migrating">how to migrate
+            to Vaadin Framework 8</a>.
         </p>
 
         <p>
-            For enhancements introduced in Vaadin 7.7, see the <a
+            For enhancements introduced in Vaadin Framework 7.7, see the <a
                 href="http://vaadin.com/download/release/7.7/7.7.0/release-notes.html">Release
-                Notes for Vaadin 7.7.0</a>.
+                Notes for Vaadin Framework 7.7.0</a>.
         </p>
 
-        <h3 id="incompatible">Incompatible or Behavior-altering Changes in @version-minor@</h3>
-        <ul>
-            <li>Vaadin now requires Java 8 or later and Servlet 3.0 or later</li>
+        <h2 id="incompatible">Incompatible or Behavior-altering Changes in @version-minor@ </h2>
+        
+        <ul><h4>Compatibility and requirements</h4>
+            <li>Vaadin Framework now requires Java 8 or later and Servlet 3.0 or later</li>
             <li>Support for older browsers (including Microsoft IE 8-10) and Windows Phone has been dropped</li>
-            <li>A new data binding API replaces the old API (including Container, Item, Property, FieldGroup, Validator, Converter and components using those).</li>
-            <li>The default width of Label is now undefined, matching other components</li>
-            <li>Immediate mode is the default for all components except Upload</li>
-            <li>Some deprecated/obsolete parts of API (including the Form component) have been removed</li>
-            <li>Most addListener/removeListener methods have been removed - use the Java 8 friendly addClickListener(), addValueChangeListener() etc. instead</li>
-            <li>Many new listeners are unregistered using a Registration object returned by addXyzListener() rather than with a separate removeXyzListener()</li>
-            <li>Old input prompts have been replaced with placeholders utilizing the related browser functionality</li>
-            <li>The old liferay theme (Liferay 6.0 look) has been removed</li>
-            <li>Components in the compatibility packages now use the prefix "vaadin7-" in declarative design files</li>
-            <li>RichTextArea no longer receives a special "v-richtextarea-readonly" class when readonly, only the standard "v-readonly" class</li>
+            <li>Support for Google App Engine has been dropped</li>
+            <li><a href="#supportedservers">Supported servers</a></li>
         </ul>
+        <ul><h4>New Data Binding API related changes</h4>
+            <li>Components using <tt>Property</tt>, <tt>Item</tt> or <tt>Container</tt> API have been reimplemented for the new API, except <tt>Tree</tt>, <tt>Table</tt>, <tt>TreeTable</tt> and <tt>Calendar</tt></li>
+            <li>Framework 7 versions of the components available in the v7 compatibility package for easier migration, <a href="#legacycomponents">see list of legacy components</a></li>
+            <li><tt>Binder</tt> is the replacement of <tt>FieldGroup</tt> and <tt>BeanFieldGroup</tt></li>
+            <li>Converters and Validators have been moved from Components to <tt>Binder</tt></li>
+            <li><tt>DataProvider</tt> is the replacement of <tt>Container</tt></li>
+            <ul>
+                <li><tt>ListDataProvider</tt> is the default in-memory data provider replacing <tt>IndexedContainer</tt>, <tt>BeanItemContainer</tt>, and <tt>BeanContainer</tt></li>
+                <li><tt>BackEndDataProvider</tt> is the basis for a lazy data provider</li>
+                <li><tt>SQLContainer</tt> is deprecated in v7 compatibility package and not directly replaced</li>
+                <li><tt>HierarchicalContainer</tt> is deprecated in v7 compatibility package and a replacement is planned for 8.1</li>
+            </ul>
+            <li>All components that list data are based on <tt>AbstractListing</tt></li>
+            <li>All <tt>AbstractListing</tt> components have been typed with the type of items they are listing</li>
+            <li><tt>HasValue</tt> replaces the <tt>Field</tt> interface as the basis for all field components</li>
+            <li>Field components based on <tt>HasValue</tt> may or may not accept null values, depending on each component. There is no <tt>setNullRepresentation</tt> anymore</li>
+            <li><tt>AbstractField::setRequired(boolean)</tt> has been replaced with:
+            <ul>
+                <li><tt>HasValue::setRequiredIndicatorVisible(boolean)</tt> which only makes the <tt>*</tt> required indicator visible for the component</li>
+                <li><tt>BindingBuilder::setRequired(String)</tt> adds a "not-empty" validator when used in <tt>Binder</tt> and makes the <tt>*</tt> required indicator visible</li>
+            </ul>
+            <li><tt>setItemCaptionGenerator</tt> in <tt>AbstractListing</tt> replaces <tt>setItemCaption</tt>, <tt>setItemCaptionMode</tt> and <tt>setItemCaptionPropertyId</tt> from <tt>AbstractSelect</tt></li>
+            <li><tt>setItemIconGenerator</tt> in <tt>AbstractListing</tt> replaces <tt>setItemIcon</tt> and <tt>setItemIconPropertyId</tt> from <tt>AbstractSelect</tt></li>
+        </ul>
+        <ul><h4>General API changes</h4>
+            <li>All listeners and most single method interfaces have been marked as <tt>@FunctionalInterface</tt></li>
+            <li>All components are now immediate, and <tt>AbstractComponent::setImmediate(boolean immediate)</tt> has been removed.</li>
+            <li>Read-only is now a feature for field components and has been moved from <tt>AbstractComponent</tt> to <tt>HasValue</tt> </li>
+            <li>Some deprecated/obsolete parts of API have been removed</li>
+            <li>All addListener/removeListener methods have been removed - replaced with the Java 8 friendly <tt>addClickListener()</tt>, <tt>addValueChangeListener()</tt> etc. instead</li>
+            <li>All new listeners are unregistered using a <tt>Registration</tt> object returned by <tt>addXyzListener()</tt> rather than with a separate <tt>removeXyzListener()</tt></li>
+            <li>Input prompts have been replaced with placeholders utilizing the related browser functionality, API is now <tt>setPlaceholder</tt> instead of <tt>setInputPrompt</tt></li>
+            <li>Valo is the default theme, instead of Reindeer</li>
+            <li>Valo is the only included theme, all other themes have been moved to the <tt>compatiblity-themes</tt> package and are available as a separate dependency</li>
+            <li><tt>SharedState</tt> and the getter methods for it have been added to each component, regardless of whether those are used for anything or not</li>
+            <li>The old liferay theme (Liferay 6.0 look) has been removed</li>
+            <li>FontAwesome icon constants have been deprecated, and will not be updated. It is replaced with <a href="https://vaadin.com/icons">Vaadin Icons</a> that are included in the Framework</li>
+            <li>It is no longer possible to configure a <tt>CurrentInstance</tt> to be automatically inherited into spawned threads.</li>
+        </ul>
+        <ul><h4>Component specific API changes</h4>
+            <li><tt>setDescription(String)</tt> now renders tooltip as inner text by default, instead of HTML. HTML can be still used by using <tt>setDescription(String, ContentMode)</tt></li>
+            <li><tt>com.vaadin.shared.ui.label.ContentMode</tt> has been moved into <tt>com.vaadin.shared.ui</tt></li>
+            <li><tt>DateField</tt> replaces old <tt>PopupDateField</tt></li>
+            <li><tt>DateField</tt> and <tt>InlineDateField</tt> are now based on Java 8 <tt>LocalDate</tt> instead of <tt>Date</tt></li>
+            <li><tt>DateTimeField</tt> and <tt>InlineDateTimeField</tt> based on Java 8 <tt>LocalDateTime</tt> are introduced for time selecting time (hour / minute / second) </li>
+            <ul><li><tt>DateField</tt> and <tt>InlineDateField</tt> don't support time anymore, meaning the highest resolution for those is <tt>DateResolution.DAY</tt></li>
+            <li><tt>Resolution</tt> for <tt>DateField</tt> and <tt>InlineDateField</tt> is replaced by <tt>DateResolution</tt> and <tt>DateTimeResolution</tt></li></ul>
+            <li><tt>OptionGroup</tt> has been removed and replaced by:</li>
+            <ul>
+                <li><tt>CheckBoxGroup</tt> replaces <tt>OptionGroup</tt> in multiselect mode</li>
+                <li><tt>RadioButtonGroup</tt> replaces <tt>OptionGroup</tt> in single select mode</li>
+                <ul><tt>OptionGroup::setItemEnabled(Object, boolean)</tt> has been replaced by <tt>setItemEnabledProvider</tt> that accepts a predicate</ul>
+            </ul>
+            <li><tt>TwinColSelect</tt> is always in multiselect mode</li>
+            <li><tt>ListSelect</tt> is always in multiselect mode</li>
+            <li><tt>Upload</tt> has a separate immediate mode <tt>setImmediateMode(boolean)</tt> replacing <tt>setImmediate</tt> and is now by default in immediate mode</li>
+            <li><tt>RichTextArea</tt> no longer receives a special "v-richtextarea-readonly" class when readonly, only the standard "v-readonly" class</li>
+            <li><tt>Grid</tt> has been typed to the bean type it is using and its columns are specified with a value provider callback instead of "propertyId"</li>
+            <li><tt>Grid</tt> Editor now uses <tt>Binder</tt> instead of <tt>FieldGroup</tt>, and doesn't support a <tt>FieldFactory</tt></li>
+            <li><tt>Grid</tt> selection API has been removed from component level to <tt>GridSelectionModel</tt> which is available via <tt>Grid::getSelectionModel()</tt></li>
+            <li><tt>Grid::setSelectionModel(GridSelectionModel)</tt> visibility has been changed from <tt>public</tt> to <tt>protected</tt> to reduce confusion with <tt>Grid::setSelectionMode</tt></li>
+        </ul>
+        <ul><h4>Client side widget specific API changes</h4>
+            <li><tt>VTextualDate</tt></li> widget class is removed and replaced by abstract <tt>VAbstractTextualDate</tt> class which is supposed to be inherited by concrete date field implementation widgets
+        </ul>
+        <ul><h4>Component specific visual changes</h4>
+            <li>The default width of <tt>Label</tt> is now undefined, matching other components</li>
+            <li>The default width for <tt>ComboBox</tt> pop-up is now 100 % (previously undefined)</li>
+            <li><tt>VerticalLayout</tt> has by default <tt>spacing = true</tt> and <tt>margin = true</tt></li>
+            <li><tt>HorizontalLayout</tt> has by default <tt>spacing = true</tt> and <tt>margin = false</tt></li>
+        </ul>
+        <ul><h4>Component specific declarative syntax changes</h4>
+            <li>Components in the compatibility packages now use the prefix <tt>vaadin7-"</tt> in declarative design files</li>
+            <li><tt>required-indicator-visible</tt> attribute replaces the <tt>required</tt> attribute</li>
+            <li><tt>placeholder</tt> attribute replaces the <tt>input-prompt</tt> attribute for input components</li>
+            <li><tt>multi-select</tt> attribute is no longer used for select components</li>
+            <li><tt>vaadin-option-group</tt> with attribute <tt>multi-select=true</tt> is replaced by <tt>v-check-box-group</tt></li>
+            <li><tt>vaadin-option-group</tt> with attribute <tt>multi-select=false</tt> is replaced by <tt>v-radio-button-group</tt></li>
+            <li><tt>immediate</tt> attribute is not used for any component</li>
+            <li><tt>read-only</tt> attribute is now only used for field components instead of all components</li>
+            <li><tt>vaadin-upload</tt> has a new attribute <tt>immediate-mode</tt> that replaces the removed <tt>immediate</tt> attribue</li>
+            <li><tt>vaadin-grid</tt> column elements don't have <tt>property-id</tt> attribute anymore. Columns aren't addressed by a property anymore but they have an id. So there is <tt>column-id</tt> attribute instead</li>
+            <li><tt>vaadin-grid</tt> doesn't have <tt>readonly</tt> attribute anymore. It  is replaced by <tt>selection-allowed</tt> attribute which has special meaning for a <tt>Grid</tt></li> 
+        </ul>
+        <ul id="legacycomponents"><h4>Legacy components in the v7 compatiblity package <tt>com.vaadin.v7.ui</tt> available as a separate dependency</h4>
+            <li><tt>Calendar</tt> - no replacement in 8</li>
+            <li><tt>CheckBox</tt></li>
+            <li><tt>ColorPicker</tt></li>
+            <li><tt>ColorPickerArea</tt></li>
+            <li><tt>ComboBox</tt></li>
+            <li><tt>CustomField</tt></li>
+            <li><tt>DateField</tt> - replaced in 8 by <tt>DateField</tt> and <tt>DateTimeField</tt></li>
+            <li><tt>Form</tt> - no replacement in 8</li>
+            <li><tt>Grid</tt> (and renderers)</li>
+            <li><tt>HorizontalLayout</tt></li>
+            <li><tt>InlineDateField</tt> - replaced in 8 by <tt>InlineDateField</tt> and <tt>InlineDateTimeField</tt></li>
+            <li><tt>Label</tt> - replacement in 8 doesn't support data binding</li>
+            <li><tt>ListSelect</tt></li>
+            <li><tt>NativeSelect</tt></li>
+            <li><tt>OptionGroup</tt> - replaced by <tt>CheckBoxGroup</tt> (multiselection) and <tt>RadioButtonGroup</tt> (single selection)</li>
+            <li><tt>PasswordField</tt></li>
+            <li><tt>PopupDateField</tt> - replaced in 8 by <tt>DateField</tt> and <tt>DateTimeField</tt></li>
+            <li><tt>ProgressBar</tt></li>
+            <li><tt>ProgressIndicator</tt></li>
+            <li><tt>RichTextArea</tt></li>
+            <li><tt>Select</tt> - removed, use <tt>ComboBox</tt> for single selection and <tt>ListSelect</tt> for multiselection</li>
+            <li><tt>Table</tt> - no replacement in 8.0, use Grid.</li>
+            <li><tt>TextArea</tt></li>
+            <li><tt>TextField</tt></li>
+            <li><tt>Tree</tt> - no replacement in 8.0, planned for 8.1</li>
+            <li><tt>TreeTable</tt> - no replacement in 8.0, TreeGrid planned for 8.1</li>
+            <li><tt>TwinColSelect</tt></li>
+            <li><tt>VerticalLayout</tt></li>
+            <li><tt>Upload</tt></li>
+        </ul>
+                
         <h3 id="knownissues">Known Issues and Limitations</h3>
         <ul>
-            <li>Context click events are not generated on iOS devices
-                (<a href="http://dev.vaadin.com/ticket/19367">#19367</a>)</li>
             <li>Drag'n'drop in a Table doesn't work on touch devices running
                 Internet Explorer (Windows Phone, Surface)
-                (<a href="http://dev.vaadin.com/ticket/13737">#13737</a>)
+                (<a href="https://github.com/vaadin/framework/issues/5170">#5170</a>)
             </li>
-            <li><p>It is currently not possible to specify <tt>font-size</tt>
-                as <tt>em</tt> or <tt>%</tt>, or layout component sizes
-                with <tt>em</tt> (<a
-                href="http://dev.vaadin.com/ticket/10634">#10634</a>).</p><p>This
-                does not apply to Valo, but using em sizes to size layouts is discouraged,
-                because it results in fractional component sizes in many cases, which
-                might cause unwanted 1px gaps between components.</p>
+            <li>Specifying layout sizes using <tt>em</tt> is currently discouraged, because it results in fractional
+            components sizes in many cases, which might cause unwanted 1px gaps between components.
             </li>
             <li>Up-to-date information about configuration needed for push and compatibility issues are available in
             <a href="https://vaadin.com/wiki/-/wiki/Main/Configuring+push+for+your+environment">this wiki page.</a>
@@ -140,38 +252,36 @@
             The most prominent limitations are:
             <ul>
                 <li>Push is currently not supported in portals (See <a
-                    href="http://dev.vaadin.com/ticket/11493">#11493</a>)
+                    href="https://github.com/vaadin/framework/issues/3741">#3741</a>)
                 </li>
                 <li>>Transport mode WEBSOCKET does not support invalidating the session on Tomcat 7,
                      nor setting cookies for the session. The new transport mode WEBSOCKET_XHR can be
                      used to bypass these limitations.
                      <br />
-                     See tickets <a href="https://dev.vaadin.com/ticket/11808">#11808</a> and
-                     <a href="https://dev.vaadin.com/ticket/11721">#11721</a>
+                     See tickets <a href="https://github.com/vaadin/framework/issues/3911">#3911</a> and
+                     <a href="https://github.com/vaadin/framework/issues/3861">#3861</a>
                 </li>
             </ul>
             </li>
-            <li>Google App Engine has some limitations. Please consult Vaadin Wiki:
-                <a href="https://vaadin.com/wiki/-/wiki/Main/Vaadin+support+for+Google+App+Engine">Vaadin support for Google App Engine</a>
-            </li>
             <li>Grid does not support adding components to cells. Instead light-weight Renderers can be
                 used to present and edit data.</li>
+            <li>The Maven GWT compilation for <tt>Vaadin7WidgetSet</tt> requires at least 1G of memory, when using the <tt>vaadin-client-compability</tt> package. If compiled inside Eclipse, possibly even more.</li>
         </ul>
 
 
-        <h2 id="vaadin">Vaadin Installation</h2>
+        <h2 id="starting">Getting started with Vaadin Framework</h2>
 
         <p>
-            <b>Vaadin</b> is a Java framework for building modern web
+            <b>Vaadin Framework</b> is a Java framework for building modern web
             applications that look great, perform well and make you and
-            your users happy. <b>Vaadin</b> is available under the
+            your users happy. <b>The Framework</b> is available under the
             Apache License, Version 2.0 (see the
             <tt>license.html</tt>
-            in the Vaadin ZIP package).
+            in the Vaadin Framework ZIP package).
         </p>
 
         <p>
-            The easiest ways to install <b>Vaadin</b> are:
+            The easiest ways to start using <b>Vaadin Framework</b> are:
         </p>
 
         <ul>
@@ -182,9 +292,9 @@
 
             <li><strong>IDE Plugins.</strong>If using Eclipse, use the
                 <a href="http://vaadin.com/eclipse">Vaadin Plugin for Eclipse</a>, which automatically
-                downloads the Vaadin libraries. For NetBeans 8.0 and 7.4, use the
+                downloads the Framework libraries. For NetBeans 8.0 and 7.4, use the
                 <a href="http://plugins.netbeans.org/plugin/50531/vaadin-plug-in-for-netbeans">official Vaadin plugin</a>
-                that provides Maven based wizards and code completion support for Vaadin development.
+                that provides Maven based wizards and code completion support for Vaadin Framework based development.
             </li>
         </ul>
 
@@ -209,13 +319,13 @@
             <li>Shared library (<tt>vaadin-shared</tt>) for both
                 server- and client-side libraries
             </li>
-            <li>Built-in themes (<tt>vaadin-themes</tt>)
+            <li>Valo theme (the only inbuilt theme) (<tt>vaadin-themes</tt>)
             </li>
             <li>Dependency libraries provided under the <tt>lib/</tt>
                 folder
             </li>
             <li>Vaadin 7 compatible classes for server-side (<tt>vaadin-compatibility-server</tt>,
-                <tt>vaadin-compatibility-shared</tt>) and client-side (<tt>vaadin-compatibility-client</tt>)
+                <tt>vaadin-compatibility-shared</tt>), client-side (<tt>vaadin-compatibility-client</tt>) and themes (<tt>vaadin-compatibility-themes</tt>)
             </li>
         </ul>
 
@@ -246,50 +356,58 @@
             components.)
         </p>
 
-        <h2 id="migrating">Migrating from Vaadin 7.7</h2>
+        <h2 id="migrating">Migrating to Vaadin Framework 8.0</h2>
 
         <p>
-            Most Vaadin 7 applications need some changes when migrating
-            to Vaadin 8. In addition to updating dependencies, all references to
-            Vaadin 7 style data binding and components using it need to be
-            updated either to use new Vaadin 8 style data binding or to use the
+            Vaadin Framework 7 applications need some changes when migrating
+            to Vaadin Framework 8. In addition to updating dependencies, all references to
+            Framework 7 style data binding and components using it need to be
+            updated either to use new Framework 8 style data binding or to use the
             compatibility versions in separate packages.
         </p>
-
         <p>
-            Vaadin 7 compatible versions of the old data binding API and
+            Vaadin Framework 7 compatible versions of the old data binding API and
             components (with the exception of Form) are available in the package
-            com.vaadin.v7 in modules vaadin-compatibility-server,
+            <tt>com.vaadin.v7</tt> in modules <tt>vaadin-compatibility-server</tt>,
             vaadin-compatibility-shared etc. that can be used instead of
-            vaadin-server, vaadin-shared etc. The package
-            vaadin-compatibility-client-compiled contains the widgetset
+            <tt>vaadin-server</tt>, vaadin-shared etc. The package
+            <tt>vaadin-compatibility-client-compiled</tt> contains the widgetset
             <tt>com.vaadin.v7.Vaadin7WidgetSet</tt> which can be used instead of
-            DefaultWidgetSet.
+            <tt>DefaultWidgetSet</tt>. Note that the widgetset compilation for
+            <tt>Vaadin7WidgetSet</tt> compilation requires at least 1G of memory.
+            To ensure this, add <tt>&lt;extraJvmArgs&gt;-Xmx1G&lt;/extraJvmArgs&gt;</tt>
+            to the vaadin-maven-plugin configuration in your <tt>pom.xml</tt> file.
+        
+        <p>
+        All applications using either <tt>Reindeer</tt>, <tt>Runo</tt>, <tt>Chameleon</tt> or <tt>Base</tt> theme must include the <tt>vaadin-compability-themes</tt> package.
         </p>
 
         <p>
-            There is a <a href="https://github.com/vaadin/vaadin8-migration-tool/">
-            migration tool</a> which helps with some of the migration steps.
-        </p>
-
-        <p>
-            Some Vaadin 7 add-ons do not work in Vaadin 8 - please check the add-ons in <a
+            Some Vaadin Framework 7 add-ons do not work in version 8 - please check the add-ons in <a
                 href="http://vaadin.com/directory/">Vaadin Directory</a>
-            for Vaadin 8 support.
+            for Framework version 8 support.
+        </p>
+        <h3>The Migration Tool</h3>
+        <p>
+            To ease the migration, the vaadin maven plugin has a target <tt>vaadin:upgrade8</tt>,
+            which updates all necessary <tt>com.vaadin.*</tt> imports in java files and prefixes design files
+            in your project to point to the legacy 7 versions, e.g. <tt>com.vaadin.ui.TextField</tt> to <tt>com.vaadin.v7.TextField</tt>.
+            This step can be also run manually by building and running the <a href="https://github.com/vaadin/framework8-migration-tool/">
+            migration tool</a> locally. Note that you still need to add the legacy package dependencies to your <tt>pom.xml</tt>.
         </p>
 
-        <h3 id="upgrading">Common Upgrade Steps</h3>
+        <h2 id="upgrading">Common Upgrade Steps For All Versions</h2>
 
-        <p>Always when upgrading from an earlier Vaadin version, you
+        <p>Always when upgrading from an earlier Vaadin Framework version, you
             must:</p>
 
         <ul>
-            <li>Recompile your classes using the new Vaadin
+            <li>Recompile your classes using the new Framework
                 version. Binary compatibility is only guaranteed for
-                maintenance releases of Vaadin.</li>
+                maintenance releases of Framework.</li>
 
             <li>Unless using the precompiled widget set, recompile
-                your widget set using the new Vaadin version.</li>
+                your widget set using the new Framework version.</li>
         </ul>
 
         <p>Remember also to refresh the project in your IDE to
@@ -308,26 +426,26 @@
         </p>
 
         <p>
-            <b>Maven</b> users should update the Vaadin dependency
+            <b>Maven</b> users should update the Vaadin Framework dependency
             version in the
             <tt>pom.xml</tt>
             .
         </p>
 
-        <h2 id="dependencies">Vaadin @version@ Dependencies</h2>
+        <h2 id="dependencies">Vaadin Framework @version@ Dependencies</h2>
 
         <p>When using Maven, Ivy, Gradle, or other dependency
-            management system, all Vaadin dependencies are downloaded
+            management system, all Framework dependencies are downloaded
             automatically. This is also the case when using the Vaadin
             Plugin for Eclipse.</p>
 
         <p>
-            The Vaadin ZIP installation package includes the
+            The Vaadin Framework ZIP installation package includes the
             dependencies in the
             <tt>lib</tt>
             subfolder. These need to be copied to the
             <tt>WEB-INF/lib</tt>
-            folder of the web application that uses Vaadin.
+            folder of the web application that uses Vaadin Framework.
         </p>
 
         <p>
@@ -350,7 +468,7 @@
         <h2 id="supportedversions">Supported Technologies</h2>
 
         <p>
-            Vaadin 8 is compatible with <b>Java 8</b> and newer. Vaadin
+            Vaadin Framework 8 is compatible with <b>Java 8</b> and newer. Vaadin Framework
             8 is especially supported on the following <b>operating
                 systems</b>:
         </p>
@@ -362,13 +480,13 @@
         </ul>
 
         <p>
-            Vaadin 8 requires <b>Java Servlet API 3.0</b> but also
+            Vaadin Framework 8 requires <b>Java Servlet API 3.0</b> but also
             supports later versions and should work with any Java
             application server that conforms to the standard. The
             following <b>application servers</b> are supported:
         </p>
 
-        <ul>
+        <ul id="supportedservers">
             <li>Apache Tomcat 7-8</li>
             <li>Apache TomEE 1.7 and 7.0</li>
             <li>Oracle WebLogic Server 12.2</li>
@@ -377,10 +495,11 @@
             <li>Wildfly 8-10</li>
             <li>Jetty 8-9</li>
             <li>Glassfish 4</li>
+            <li>Payara Server 164</li>
         </ul>
 
         <p>
-            Vaadin 8 supports the JSR-286 Portlet specification and all
+            Vaadin Framework 8 supports the JSR-286 Portlet specification and all
             portals that implement the specification should work provided
             they support Java 8 and Servlet 3.0. The following <b>portals</b>
             are supported:
@@ -391,11 +510,7 @@
         </ul>
 
         <p>
-            Vaadin also supports <b>Google App Engine</b>.
-        </p>
-
-        <p>
-            Vaadin @version@ supports the following <b>desktop browsers</b>:
+            Vaadin Framework @version@ supports the following <b>desktop browsers</b>:
         </p>
 
         <ul>
@@ -407,22 +522,13 @@
         </ul>
 
         <p>
-            Additionally, Vaadin supports the built-in browsers in the
+            Additionally, Vaadin Framework supports the built-in browsers in the
             following <b>mobile operating systems</b>:
         </p>
 
         <ul>
             <li>iOS 9+</li>
-            <li>Android 4+</li>
-        </ul>
-
-        <p>Vaadin SQL Container supports the following databases:</p>
-        <ul>
-            <li>HSQLDB</li>
-            <li>MySQL</li>
-            <li>MSSQL</li>
-            <li>Oracle</li>
-            <li>PostgreSQL</li>
+            <li>Android 4+ with Chrome 42+</li>
         </ul>
 
         <h2 id="vaadinontheweb">Vaadin on the Web</h2>
@@ -432,34 +538,27 @@
                     developer portal containing everything you need to
                     know about Vaadin</a></li>
             <li><a href="http://vaadin.com/demo">vaadin.com/demo
-                    - A collection of demos for Vaadin</a></li>
+                    - A collection of demos for Vaadin Framework</a></li>
             <li><a href="http://vaadin.com/learn">vaadin.com/learn
-                    - Getting started with Vaadin</a></li>
+                    - Getting started with Vaadin Framework</a></li>
             <li><a href="http://vaadin.com/forum">vaadin.com/forum
-                    - Forums for Vaadin related discussions</a></li>
-            <li><a href="http://vaadin.com/book">vaadin.com/book
-                    - Book of Vaadin - everything you need to know about
-                    Vaadin</a></li>
+                    - Forums for Vaadin Framework related discussions</a></li>
+            <li><a href="http://vaadin.com/docs">vaadin.com/docs
+                    - Documentation for Vaadin Framework</a></li>
             <li><a href="http://vaadin.com/api">vaadin.com/api
                     - Online javadocs</a></li>
             <li><a href="http://vaadin.com/directory">vaadin.com/directory
-                    - Add-ons for Vaadin</a></li>
-
+                    - Add-ons for Vaadin Framework</a></li>
             <li><a href="http://vaadin.com/pro-tools">vaadin.com/pro-tools
-                    - Commercial tools for Vaadin development</a></li>
+                    - Commercial tools for Vaadin Framework</a></li>
             <li><a href="http://vaadin.com/support">vaadin.com/support
-                    - Commercial support for Vaadin development </a></li>
+                    - Commercial support for Vaadin Framework</a></li>
             <li><a href="http://vaadin.com/services">vaadin.com/services
-                    - Expert services for Vaadin</a></li>
+                    - Expert services for Vaadin Framework users</a></li>
             <li><a href="http://vaadin.com/company">vaadin.com/company
-                    - Information about the company behind Vaadin</a></li>
-
-            <li><a href="http://dev.vaadin.com">dev.vaadin.com
-                    - Bug tracker</a></li>
-
-            <li><a
-                href="https://vaadin.com/contribute">How to get the source
-                    code of Vaadin</a></li>
+                    - Information about the company behind Vaadin Framework</a></li>
+            <li><a href="https://vaadin.com/contribute">vaadin.com/contribute - Contribution quide</a></li>
+            <li><a href="https://github.com/vaadin/framework/issues">github.com/vaadin/framework - Github repository</a></li>
         </ul>
 
     </div>

@@ -14,7 +14,6 @@ import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Button.ClickListener;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Label;
-import com.vaadin.ui.Layout;
 import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.TabSheet.Tab;
 import com.vaadin.ui.VerticalLayout;
@@ -100,7 +99,9 @@ public class TabKeyboardNavigation extends AbstractReindeerTestUI {
     }
 
     private Tab addTab() {
-        Layout content = new VerticalLayout();
+        VerticalLayout content = new VerticalLayout();
+        content.setMargin(false);
+        content.setSpacing(false);
         tabs.add(content);
         Label label = new Label("Tab " + index);
         label.setId(labelID(index));

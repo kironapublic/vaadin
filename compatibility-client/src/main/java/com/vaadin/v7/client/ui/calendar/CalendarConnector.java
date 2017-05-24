@@ -44,6 +44,7 @@ import com.vaadin.client.ui.ActionOwner;
 import com.vaadin.client.ui.SimpleManagedLayout;
 import com.vaadin.shared.ui.Connect;
 import com.vaadin.shared.ui.Connect.LoadStyle;
+import com.vaadin.shared.util.SharedUtil;
 import com.vaadin.v7.client.ui.AbstractLegacyComponentConnector;
 import com.vaadin.v7.client.ui.VCalendar;
 import com.vaadin.v7.client.ui.VCalendar.BackwardListener;
@@ -71,6 +72,7 @@ import com.vaadin.v7.shared.ui.calendar.CalendarClientRpc;
 import com.vaadin.v7.shared.ui.calendar.CalendarEventId;
 import com.vaadin.v7.shared.ui.calendar.CalendarServerRpc;
 import com.vaadin.v7.shared.ui.calendar.CalendarState;
+import com.vaadin.v7.shared.ui.calendar.CalendarState.EventSortOrder;
 import com.vaadin.v7.shared.ui.calendar.DateConstants;
 import com.vaadin.v7.ui.Calendar;
 
@@ -88,8 +90,8 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
     private CalendarServerRpc rpc = RpcProxy.create(CalendarServerRpc.class,
             this);
 
-    private final HashMap<String, String> actionMap = new HashMap<>();
-    private HashMap<Object, String> tooltips = new HashMap<>();
+    private final HashMap<String, String> actionMap = new HashMap<String, String>();
+    private HashMap<Object, String> tooltips = new HashMap<Object, String>();
 
     private static final String DROPHANDLER_ACCEPT_CRITERIA_PAINT_TAG = "-ac";
 
@@ -352,6 +354,12 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
 
         widget.setEventCaptionAsHtml(state.eventCaptionAsHtml);
 
+        EventSortOrder oldOrder = getWidget().getSortOrder();
+        if (!SharedUtil.equals(oldOrder, getState().eventSortOrder)) {
+            getWidget().setSortOrder(getState().eventSortOrder);
+        }
+        updateEventsInView();
+
         List<CalendarState.Day> days = state.days;
         List<CalendarState.Event> events = state.events;
 
@@ -449,6 +457,27 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
         return true;
     }
 
+    private void updateEventsInView() {
+        CalendarState state = getState();
+        List<CalendarState.Day> days = state.days;
+        List<CalendarState.Event> events = state.events;
+
+        CalendarDropHandler dropHandler = getWidget().getDropHandler();
+        if (showingMonthView()) {
+            updateMonthView(days, events);
+            if (dropHandler != null
+                    && !(dropHandler instanceof CalendarMonthDropHandler)) {
+                getWidget().setDropHandler(new CalendarMonthDropHandler(this));
+            }
+        } else {
+            updateWeekView(days, events);
+            if (dropHandler != null
+                    && !(dropHandler instanceof CalendarWeekDropHandler)) {
+                getWidget().setDropHandler(new CalendarWeekDropHandler(this));
+            }
+        }
+    }
+
     private void updateMonthView(List<CalendarState.Day> days,
             List<CalendarState.Event> events) {
         CalendarState state = getState();
@@ -469,8 +498,8 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
     }
 
     private Action[] getActionsBetween(Date start, Date end) {
-        List<Action> actions = new ArrayList<>();
-        List<String> ids = new ArrayList<>();
+        List<Action> actions = new ArrayList<Action>();
+        List<String> ids = new ArrayList<String>();
 
         for (int i = 0; i < actionKeys.size(); i++) {
             String actionKey = actionKeys.get(i);
@@ -525,7 +554,7 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
         return actions.toArray(new Action[actions.size()]);
     }
 
-    private List<String> actionKeys = new ArrayList<>();
+    private List<String> actionKeys = new ArrayList<String>();
 
     private void updateActionMap(List<CalendarState.Action> actions) {
         actionMap.clear();
@@ -624,7 +653,7 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
      */
     @Override
     public Action[] getActions() {
-        List<Action> actions = new ArrayList<>();
+        List<Action> actions = new ArrayList<Action>();
         for (int i = 0; i < actionKeys.size(); i++) {
             final String actionKey = actionKeys.get(i);
             final VCalendarAction a = new VCalendarAction(this, rpc, actionKey);
@@ -655,7 +684,7 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
 
     private List<CalendarEvent> calendarEventListOf(
             List<CalendarState.Event> events, boolean format24h) {
-        List<CalendarEvent> list = new ArrayList<>(events.size());
+        List<CalendarEvent> list = new ArrayList<CalendarEvent>(events.size());
         for (CalendarState.Event event : events) {
             final String dateFrom = event.dateFrom;
             final String dateTo = event.dateTo;
@@ -680,7 +709,7 @@ public class CalendarConnector extends AbstractLegacyComponentConnector
     }
 
     private List<CalendarDay> calendarDayListOf(List<CalendarState.Day> days) {
-        List<CalendarDay> list = new ArrayList<>(days.size());
+        List<CalendarDay> list = new ArrayList<CalendarDay>(days.size());
         for (CalendarState.Day day : days) {
             CalendarDay d = new CalendarDay(day.date, day.localizedDateFormat,
                     day.dayOfWeek, day.week, day.yearOfWeek);

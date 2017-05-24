@@ -15,14 +15,13 @@
  */
 package com.vaadin.data;
 
-import com.vaadin.data.util.converter.ValueContext;
 import com.vaadin.server.SerializableFunction;
 
 /**
  * Provider interface for generating localizable error messages using
  * {@link ValueContext}.
  *
- * @since
+ * @since 8.0
  * @author Vaadin Ltd.
  */
 @FunctionalInterface

@@ -28,15 +28,13 @@ import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.vaadin.data.util.converter.Converter;
-import com.vaadin.data.util.converter.ValueContext;
 import com.vaadin.tests.data.bean.BeanWithEnums;
 import com.vaadin.tests.data.bean.TestEnum;
 import com.vaadin.ui.CheckBoxGroup;
 
 public class BinderMultiSelectTest
         extends BinderTestBase<Binder<BeanWithEnums>, BeanWithEnums> {
-    public class TestEnumSetToStringConverter
+    public static class TestEnumSetToStringConverter
             implements Converter<Set<TestEnum>, String> {
         @Override
         public Result<String> convertToModel(Set<TestEnum> value,
@@ -54,7 +52,7 @@ public class BinderMultiSelectTest
         }
     }
 
-    private Binder<AtomicReference<String>> converterBinder = new Binder<>();
+    private final Binder<AtomicReference<String>> converterBinder = new Binder<>();
 
     private CheckBoxGroup<TestEnum> select;
 
@@ -67,8 +65,7 @@ public class BinderMultiSelectTest
 
         converterBinder.forField(select)
                 .withConverter(new TestEnumSetToStringConverter())
-                .bind(AtomicReference<String>::get,
-                        AtomicReference<String>::set);
+                .bind(AtomicReference::get, AtomicReference::set);
     }
 
     @Test
@@ -157,7 +154,7 @@ public class BinderMultiSelectTest
         converterBinder.readBean(new AtomicReference<>("TWO"));
 
         assertEquals(Collections.singleton(TestEnum.TWO),
-                select.getSelectionModel().getSelectedItems());
+                select.getSelectedItems());
     }
 
     @Test

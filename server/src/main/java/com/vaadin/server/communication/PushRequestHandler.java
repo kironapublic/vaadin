@@ -37,7 +37,6 @@ import org.atmosphere.util.VoidAnnotationProcessor;
 
 import com.vaadin.server.RequestHandler;
 import com.vaadin.server.ServiceDestroyEvent;
-import com.vaadin.server.ServiceDestroyListener;
 import com.vaadin.server.ServiceException;
 import com.vaadin.server.ServletPortletHelper;
 import com.vaadin.server.SessionExpiredHandler;
@@ -67,11 +66,8 @@ public class PushRequestHandler
     public PushRequestHandler(VaadinServletService service)
             throws ServiceException {
 
-        service.addServiceDestroyListener(new ServiceDestroyListener() {
-            @Override
-            public void serviceDestroy(ServiceDestroyEvent event) {
-                destroy();
-            }
+        service.addServiceDestroyListener((ServiceDestroyEvent event) -> {
+            destroy();
         });
 
         final ServletConfig vaadinServletConfig = service.getServlet()

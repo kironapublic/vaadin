@@ -16,11 +16,14 @@
 package com.vaadin.event.selection;
 
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 
 import com.vaadin.data.HasValue.ValueChangeEvent;
 import com.vaadin.ui.AbstractMultiSelect;
+import com.vaadin.ui.Component;
+import com.vaadin.ui.MultiSelect;
 
 /**
  * Event fired when the the selection changes in a
@@ -36,8 +39,6 @@ import com.vaadin.ui.AbstractMultiSelect;
 public class MultiSelectionEvent<T> extends ValueChangeEvent<Set<T>>
         implements SelectionEvent<T> {
 
-    private final Set<T> oldSelection;
-
     /**
      * Creates a new event.
      *
@@ -51,8 +52,25 @@ public class MultiSelectionEvent<T> extends ValueChangeEvent<Set<T>>
      */
     public MultiSelectionEvent(AbstractMultiSelect<T> source,
             Set<T> oldSelection, boolean userOriginated) {
-        super(source, userOriginated);
-        this.oldSelection = oldSelection;
+        super(source, oldSelection, userOriginated);
+    }
+
+    /**
+     * Creates a new selection change event in a multiselect component.
+     *
+     * @param component
+     *            the component
+     * @param source
+     *            the multiselect source
+     * @param oldSelection
+     *            the old set of selected items
+     * @param userOriginated
+     *            {@code true} if this event originates from the client,
+     *            {@code false} otherwise.
+     */
+    public MultiSelectionEvent(Component component, MultiSelect<T> source,
+            Set<T> oldSelection, boolean userOriginated) {
+        super(component, source, oldSelection, userOriginated);
     }
 
     /**
@@ -61,7 +79,7 @@ public class MultiSelectionEvent<T> extends ValueChangeEvent<Set<T>>
      * The result is the current selection of the source
      * {@link AbstractMultiSelect} object. So it's always exactly the same as
      * {@link AbstractMultiSelect#getValue()}
-     * 
+     *
      * @see #getValue()
      *
      * @return a set of items selected after the selection was changed
@@ -76,11 +94,61 @@ public class MultiSelectionEvent<T> extends ValueChangeEvent<Set<T>>
      * @return a set of items selected before the selection was changed
      */
     public Set<T> getOldSelection() {
-        return Collections.unmodifiableSet(oldSelection);
+        return Collections.unmodifiableSet(getOldValue());
+    }
+
+    /**
+     * Gets the items that were removed from selection.
+     * <p>
+     * This is just a convenience method for checking what was previously
+     * selected in {@link #getOldSelection()} but not selected anymore in
+     * {@link #getNewSelection()}.
+     *
+     * @return the items that were removed from selection
+     */
+    public Set<T> getRemovedSelection() {
+        LinkedHashSet<T> copy = new LinkedHashSet<>(getOldValue());
+        copy.removeAll(getNewSelection());
+        return copy;
+    }
+
+    /**
+     * Gets the items that were added to selection.
+     * <p>
+     * This is just a convenience method for checking what is new selected in
+     * {@link #getNewSelection()} and wasn't selected in
+     * {@link #getOldSelection()}.
+     *
+     * @return the items that were removed from selection
+     */
+    public Set<T> getAddedSelection() {
+        LinkedHashSet<T> copy = new LinkedHashSet<>(getValue());
+        copy.removeAll(getOldValue());
+        return copy;
     }
 
     @Override
-    public Optional<T> getFirstSelected() {
+    public Optional<T> getFirstSelectedItem() {
         return getValue().stream().findFirst();
+    }
+
+    /**
+     * The multiselect on which the Event initially occurred.
+     *
+     * @return the multiselect on which the Event initially occurred.
+     */
+    @Override
+    public MultiSelect<T> getSource() {
+        return (MultiSelect<T>) super.getSource();
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This is the same as {@link #getValue()}.
+     */
+    @Override
+    public Set<T> getAllSelectedItems() {
+        return getValue();
     }
 }

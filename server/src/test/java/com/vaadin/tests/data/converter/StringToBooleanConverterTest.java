@@ -7,8 +7,8 @@ import java.util.Locale;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.vaadin.data.util.converter.StringToBooleanConverter;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.ValueContext;
+import com.vaadin.data.converter.StringToBooleanConverter;
 
 public class StringToBooleanConverterTest extends AbstractStringConverterTest {
 
@@ -21,7 +21,7 @@ public class StringToBooleanConverterTest extends AbstractStringConverterTest {
             getErrorMessage(), "yes", "no");
     private StringToBooleanConverter emptyTrueConverter = new StringToBooleanConverter(
             getErrorMessage(), "", "ABSENT");
-    private StringToBooleanConverter localeConverter = new StringToBooleanConverter(
+    private final StringToBooleanConverter localeConverter = new StringToBooleanConverter(
             getErrorMessage()) {
         @Override
         public String getFalseString(Locale locale) {

@@ -28,6 +28,7 @@ import com.vaadin.util.ReflectTools;
 
 public interface LayoutEvents {
 
+    @FunctionalInterface
     public interface LayoutClickListener extends ConnectorEventListener {
 
         public static final Method clickMethod = ReflectTools.findMethod(
@@ -78,6 +79,7 @@ public interface LayoutEvents {
          * @param listener
          *            The listener to add
          * @return a registration object for removing the listener
+         * @since 8.0
          */
         public Registration addLayoutClickListener(
                 LayoutClickListener listener);

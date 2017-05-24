@@ -16,12 +16,13 @@
 package com.vaadin.ui;
 
 import java.io.Serializable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Element;
@@ -70,7 +71,7 @@ public class MenuBar extends AbstractComponent
         return (MenuBarState) super.getState(markAsDirty);
     }
 
-    /** Paint (serialise) the component for the client. */
+    /** Paint (serialize) the component for the client. */
     @Override
     public void paintContent(PaintTarget target) throws PaintException {
         target.addAttribute(MenuBarConstants.OPEN_ROOT_MENU_ON_HOWER,
@@ -159,10 +160,10 @@ public class MenuBar extends AbstractComponent
         target.endTag("item");
     }
 
-    /** Deserialize changes received from client. */
+    /** De-serialize changes received from client. */
     @Override
     public void changeVariables(Object source, Map<String, Object> variables) {
-        Stack<MenuItem> items = new Stack<>();
+        final Deque<MenuItem> items = new ArrayDeque<>();
         boolean found = false;
 
         if (variables.containsKey("clickedId")) {
@@ -176,9 +177,9 @@ public class MenuBar extends AbstractComponent
             MenuItem tmpItem = null;
 
             // Go through all the items in the menu
-            while (!found && !items.empty()) {
+            while (!found && !items.isEmpty()) {
                 tmpItem = items.pop();
-                found = (clickedId.intValue() == tmpItem.getId());
+                found = (clickedId == tmpItem.getId());
 
                 if (tmpItem.hasChildren()) {
                     itr = tmpItem.getChildren().iterator();
@@ -433,6 +434,7 @@ public class MenuBar extends AbstractComponent
      * clicks on the containing {@link com.vaadin.ui.MenuBar.MenuItem}. The
      * selected item is given as an argument.
      */
+    @FunctionalInterface
     public interface Command extends Serializable {
         public void menuSelected(MenuBar.MenuItem selectedItem);
     }
@@ -466,7 +468,7 @@ public class MenuBar extends AbstractComponent
          * command associated with it. Icon and command can be null, but a
          * caption must be given.
          *
-         * @param text
+         * @param caption
          *            The text associated with the command
          * @param command
          *            The command to be fired
@@ -933,7 +935,6 @@ public class MenuBar extends AbstractComponent
          * The CSS style corresponding to the checked state is "-checked".
          * </p>
          *
-         * @return true if the item is checked, false otherwise
          * @since 6.6.2
          */
         public void setChecked(boolean checked) {

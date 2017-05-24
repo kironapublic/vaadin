@@ -14,8 +14,9 @@ import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
 import com.vaadin.testbench.TestBenchElement;
-import com.vaadin.testbench.customelements.GridElement;
+import com.vaadin.testbench.elements.GridElement;
 import com.vaadin.testbench.elements.GridElement.GridCellElement;
+import com.vaadin.testbench.elements.GridElement.GridEditorElement;
 import com.vaadin.testbench.parallel.Browser;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 import com.vaadin.v7.tests.components.grid.basicfeatures.GridBasicFeaturesTest.CellSide;
@@ -24,6 +25,8 @@ import com.vaadin.v7.tests.components.grid.basicfeatures.GridBasicFeaturesTest.C
  * Base class for all {@link GridBasics} UI tests
  */
 public abstract class GridBasicsTest extends MultiBrowserTest {
+
+    public static final int ROWS = 1000;
 
     /* Identical List of test data */
     private List<DataObject> testData;
@@ -130,7 +133,7 @@ public abstract class GridBasicsTest extends MultiBrowserTest {
             return 5;
         } else {
             int half = columnHeader.getSize().getWidth() / 2;
-            return half + (half / 2);
+            return half + half / 2;
         }
     }
 
@@ -196,12 +199,64 @@ public abstract class GridBasicsTest extends MultiBrowserTest {
         List<WebElement> elements = sidebar
                 .findElements(By.className("column-hiding-toggle"));
         for (WebElement e : elements) {
-            if ((e.getText().toLowerCase())
-                    .startsWith("column " + columnIndex)) {
+            if (e.getText().toLowerCase().startsWith("column " + columnIndex)) {
                 return e;
             }
         }
         return null;
     }
 
+    protected GridEditorElement getEditor() {
+        return getGridElement().getEditor();
+    }
+
+    protected int getGridVerticalScrollPos() {
+        return ((Number) executeScript("return arguments[0].scrollTop",
+                getGridVerticalScrollbar())).intValue();
+    }
+
+    protected void toggleFirstRowSelection() {
+        selectMenuPath("Component", "Body rows", "Toggle first row selection");
+    }
+
+    protected void selectAll() {
+        selectMenuPath("Component", "State", "Selection model", "Select All");
+    }
+
+    protected void deselectAll() {
+        selectMenuPath("Component", "State", "Selection model", "Deselect All");
+    }
+
+    protected void setSelectionModelMulti() {
+        selectMenuPath("Component", "State", "Selection model", "multi");
+    }
+
+    protected void setSelectionModelSingle() {
+        selectMenuPath("Component", "State", "Selection model", "single");
+    }
+
+    protected void setSelectionModelNone() {
+        selectMenuPath("Component", "State", "Selection model", "none");
+    }
+
+    protected void setSelectAllCheckBoxVisible() {
+        selectMenuPath("Component", "State", "Selection model",
+                "SelectAllCheckbox: Visible");
+    }
+
+    protected void setSelectAllCheckBoxHidden() {
+        selectMenuPath("Component", "State", "Selection model",
+                "SelectAllCheckbox: Hidden");
+    }
+
+    protected void setSelectAllCheckBoxDefault() {
+        selectMenuPath("Component", "State", "Selection model",
+                "SelectAllCheckbox: Default");
+    }
+
+    protected WebElement getSelectAllCheckbox() {
+        GridCellElement header = getGridElement().getHeaderCell(0, 0);
+
+        return header.findElement(By.tagName("input"));
+    }
 }

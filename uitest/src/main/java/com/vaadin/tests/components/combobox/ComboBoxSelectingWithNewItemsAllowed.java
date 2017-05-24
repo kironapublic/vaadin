@@ -15,8 +15,8 @@
  */
 package com.vaadin.tests.components.combobox;
 
+import com.vaadin.data.provider.Query;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.server.data.Query;
 import com.vaadin.ui.Label;
 
 public class ComboBoxSelectingWithNewItemsAllowed extends ComboBoxSelecting {
@@ -31,12 +31,12 @@ public class ComboBoxSelectingWithNewItemsAllowed extends ComboBoxSelecting {
         comboBox.setNewItemHandler(text -> {
             items.add(text);
             comboBox.setItems(items);
-            comboBox.select(text);
+            comboBox.setValue(text);
             label.setValue(String.valueOf(items.size()));
         });
 
         comboBox.addValueChangeListener(event -> label.setValue(
-                String.valueOf(comboBox.getDataSource().size(new Query()))));
+                String.valueOf(comboBox.getDataProvider().size(new Query()))));
         addComponent(label);
     }
 

@@ -15,9 +15,9 @@
  */
 package com.vaadin.tests.themes.valo;
 
+import com.vaadin.icons.VaadinIcons;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
-import com.vaadin.server.FontAwesome;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.CssLayout;
@@ -25,13 +25,13 @@ import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
 import com.vaadin.ui.MenuBar.MenuItem;
-import com.vaadin.ui.themes.ValoTheme;
 import com.vaadin.ui.Panel;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.themes.ValoTheme;
 
 public class Panels extends VerticalLayout implements View {
     public Panels() {
-        setMargin(true);
+        setSpacing(false);
 
         Label h1 = new Label("Panels & Layout panels");
         h1.addStyleName(ValoTheme.LABEL_H1);
@@ -39,7 +39,6 @@ public class Panels extends VerticalLayout implements View {
 
         HorizontalLayout row = new HorizontalLayout();
         row.addStyleName(ValoTheme.LAYOUT_HORIZONTAL_WRAPPING);
-        row.setSpacing(true);
         addComponent(row);
         TestIcon testIcon = new TestIcon(60);
 
@@ -104,6 +103,7 @@ public class Panels extends VerticalLayout implements View {
         layout.addStyleName(ValoTheme.LAYOUT_CARD);
         row.addComponent(layout);
         HorizontalLayout panelCaption = new HorizontalLayout();
+        panelCaption.setSpacing(false);
         panelCaption.addStyleName("v-panel-caption");
         panelCaption.setWidth("100%");
         // panelCaption.setDefaultComponentAlignment(Alignment.MIDDLE_LEFT);
@@ -112,7 +112,7 @@ public class Panels extends VerticalLayout implements View {
         panelCaption.setExpandRatio(label, 1);
 
         Button action = new Button();
-        action.setIcon(FontAwesome.PENCIL);
+        action.setIcon(VaadinIcons.PENCIL);
         action.addStyleName(ValoTheme.BUTTON_BORDERLESS_COLORED);
         action.addStyleName(ValoTheme.BUTTON_SMALL);
         action.addStyleName(ValoTheme.BUTTON_ICON_ONLY);
@@ -120,7 +120,7 @@ public class Panels extends VerticalLayout implements View {
         MenuBar dropdown = new MenuBar();
         dropdown.addStyleName(ValoTheme.MENUBAR_BORDERLESS);
         dropdown.addStyleName(ValoTheme.MENUBAR_SMALL);
-        MenuItem addItem = dropdown.addItem("", FontAwesome.CHEVRON_DOWN, null);
+        MenuItem addItem = dropdown.addItem("", VaadinIcons.CHEVRON_DOWN, null);
         addItem.setStyleName("icon-only");
         addItem.addItem("Settings", null);
         addItem.addItem("Preferences", null);
@@ -143,8 +143,6 @@ public class Panels extends VerticalLayout implements View {
     Component panelContent() {
         VerticalLayout layout = new VerticalLayout();
         layout.setSizeFull();
-        layout.setMargin(true);
-        layout.setSpacing(true);
         Label content = new Label(
                 "Suspendisse dictum feugiat nisl ut dapibus. Mauris iaculis porttitor posuere. Praesent id metus massa, ut blandit odio.");
         content.setWidth("10em");
@@ -157,8 +155,6 @@ public class Panels extends VerticalLayout implements View {
 
     Component panelContentScroll() {
         VerticalLayout layout = new VerticalLayout();
-        layout.setMargin(true);
-        layout.setSpacing(true);
         Label content = new Label(
                 "Suspendisse dictum feugiat nisl ut dapibus. Mauris iaculis porttitor posuere. Praesent id metus massa, ut blandit odio. Suspendisse dictum feugiat nisl ut dapibus. Mauris iaculis porttitor posuere. Praesent id metus massa, ut blandit odio.");
         content.setWidth("10em");

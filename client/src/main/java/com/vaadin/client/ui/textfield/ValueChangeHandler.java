@@ -23,6 +23,8 @@ import com.vaadin.shared.ui.ValueChangeMode;
 /**
  * Helper for dealing with scheduling value change events based on a given mode
  * and possibly timeout.
+ * 
+ * @since 8.0
  */
 public class ValueChangeHandler {
 
@@ -38,10 +40,15 @@ public class ValueChangeHandler {
 
     private Owner owner;
 
+    private boolean scheduled;
+
     private Timer valueChangeTrigger = new Timer() {
         @Override
         public void run() {
-            Scheduler.get().scheduleDeferred(() -> owner.sendValueChange());
+            Scheduler.get().scheduleDeferred(() -> {
+                owner.sendValueChange();
+                scheduled = false;
+            });
         }
     };
 
@@ -88,6 +95,7 @@ public class ValueChangeHandler {
     }
 
     private void lazyTextChange() {
+        scheduled = true;
         valueChangeTrigger.schedule(valueChangeTimeout);
     }
 
@@ -95,10 +103,12 @@ public class ValueChangeHandler {
         if (valueChangeTrigger.isRunning()) {
             return;
         }
+        scheduled = true;
         valueChangeTrigger.schedule(valueChangeTimeout);
     }
 
     private void eagerTextChange() {
+        scheduled = true;
         valueChangeTrigger.run();
     }
 
@@ -126,4 +136,15 @@ public class ValueChangeHandler {
         this.valueChangeTimeout = valueChangeTimeout;
     }
 
+    /**
+     * Checks whether the value change is scheduled for sending.
+     *
+     * @since 8.0
+     *
+     * @return {@code true} if value change is scheduled for sending,
+     *         {@code false} otherwise
+     */
+    public boolean isScheduled() {
+        return scheduled;
+    }
 }

@@ -28,7 +28,7 @@ import com.vaadin.ui.Component.Event;
 import com.vaadin.util.ReflectTools;
 
 /**
- * Interface that serves as a wrapper for {@link Field} related events.
+ * Interface that serves as a wrapper for focus and blur events.
  */
 public interface FieldEvents {
 
@@ -55,19 +55,6 @@ public interface FieldEvents {
          */
         public Registration addFocusListener(FocusListener listener);
 
-        /**
-         * Removes a <code>BlurListener</code> from the Component.
-         *
-         * @param listener
-         * @see FocusListener
-         * @since 6.2
-         *
-         * @deprecated As of 8.0, replaced by {@link Registration#remove()} in
-         *             the registration object returned from
-         *             {@link #addFocusListener(FocusListener)}.
-         */
-        @Deprecated
-        public void removeFocusListener(FocusListener listener);
     }
 
     /**
@@ -94,21 +81,6 @@ public interface FieldEvents {
          */
         public Registration addBlurListener(BlurListener listener);
 
-        /**
-         * Removes a <code>BlurListener</code> from the Component.
-         *
-         * @see BlurListener
-         * @since 6.2
-         *
-         * @param listener
-         *            the listener to remove
-         * 
-         * @deprecated As of 8.0, replaced by {@link Registration#remove()} in
-         *             the registration object returned from
-         *             {@link #addFocusListener(FocusListener)}.
-         */
-        @Deprecated
-        public void removeBlurListener(BlurListener listener);
     }
 
     /**
@@ -137,6 +109,7 @@ public interface FieldEvents {
      * @see FocusEvent
      * @since 6.2
      */
+    @FunctionalInterface
     public interface FocusListener extends ConnectorEventListener {
 
         public static final Method focusMethod = ReflectTools
@@ -177,6 +150,7 @@ public interface FieldEvents {
      * @see BlurEvent
      * @since 6.2
      */
+    @FunctionalInterface
     public interface BlurListener extends ConnectorEventListener {
 
         public static final Method blurMethod = ReflectTools
@@ -194,7 +168,7 @@ public interface FieldEvents {
     public static abstract class FocusAndBlurServerRpcImpl
             implements FocusAndBlurServerRpc {
 
-        private Component component;
+        private final Component component;
 
         public FocusAndBlurServerRpcImpl(Component component) {
             this.component = component;
@@ -216,9 +190,9 @@ public interface FieldEvents {
     /**
      * Focus and blur server RPC implementation which fires focus or blur event
      * using a provided event handler.
-     * 
-     * @author Vaadin Ltd
      *
+     * @author Vaadin Ltd
+     * @since 8.0
      */
     public static class FocusAndBlurServerRpcDecorator
             extends FocusAndBlurServerRpcImpl {
@@ -227,7 +201,7 @@ public interface FieldEvents {
 
         /**
          * Create a new decorator instance.
-         * 
+         *
          * @param component
          *            the source events component
          * @param eventHandler

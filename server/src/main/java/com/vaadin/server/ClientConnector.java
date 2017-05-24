@@ -55,6 +55,7 @@ public interface ClientConnector extends Connector {
      * Interface for listening {@link AttachEvent connector attach events}.
      *
      */
+    @FunctionalInterface
     public static interface AttachListener extends ConnectorEventListener {
         public static final Method attachMethod = ReflectTools
                 .findMethod(AttachListener.class, "attach", AttachEvent.class);
@@ -83,6 +84,7 @@ public interface ClientConnector extends Connector {
      * Interface for listening {@link DetachEvent connector detach events}.
      *
      */
+    @FunctionalInterface
     public static interface DetachListener extends ConnectorEventListener {
         public static final Method detachMethod = ReflectTools
                 .findMethod(DetachListener.class, "detach", DetachEvent.class);
@@ -96,11 +98,27 @@ public interface ClientConnector extends Connector {
         public void detach(DetachEvent event);
     }
 
+    /**
+     * Add a listener for connector attach events.
+     *
+     * @since 8.0
+     *
+     * @param listener
+     * @return Registration for unregistering the listener
+     */
     public Registration addAttachListener(AttachListener listener);
 
     @Deprecated
     public void removeAttachListener(AttachListener listener);
 
+    /**
+     * Add a listener for connector detach events.
+     *
+     * @since 8.0
+     *
+     * @param listener
+     * @return Registration for unregistering the listener
+     */
     public Registration addDetachListener(DetachListener listener);
 
     @Deprecated
@@ -108,13 +126,12 @@ public interface ClientConnector extends Connector {
 
     /**
      * An error event for connector related errors. Use {@link #getConnector()}
-     * to find the connector where the error occurred or {@link #getComponent()}
-     * to find the nearest parent component.
+     * to find the connector where the error occurred.
      */
     public static class ConnectorErrorEvent
             extends com.vaadin.server.ErrorEvent {
 
-        private Connector connector;
+        private final Connector connector;
 
         public ConnectorErrorEvent(Connector connector, Throwable t) {
             super(t);
@@ -206,7 +223,7 @@ public interface ClientConnector extends Connector {
      * Notifies the connector that it is connected to a VaadinSession (and
      * therefore also to a UI).
      * <p>
-     * The caller of this method is {@link #setParent(ClientConnector)} if the
+     * The caller of this method is {@link Connector#setParent(ClientConnector)} if the
      * parent is itself already attached to the session. If not, the parent will
      * call the {@link #attach()} for all its children when it is attached to
      * the session. This method is always called before the connector's data is

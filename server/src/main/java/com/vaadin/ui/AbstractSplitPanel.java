@@ -54,7 +54,7 @@ public abstract class AbstractSplitPanel extends AbstractComponentContainer {
     private Unit posMinUnit;
     private Unit posMaxUnit;
 
-    private AbstractSplitPanelRpc rpc = new AbstractSplitPanelRpc() {
+    private final AbstractSplitPanelRpc rpc = new AbstractSplitPanelRpc() {
 
         @Override
         public void splitterClick(MouseEventDetails mouseDetails) {
@@ -503,6 +503,7 @@ public abstract class AbstractSplitPanel extends AbstractComponentContainer {
      * @see SplitterClickEvent
      * @since 6.2
      */
+    @FunctionalInterface
     public interface SplitterClickListener extends ConnectorEventListener {
 
         public static final Method clickMethod = ReflectTools.findMethod(
@@ -533,6 +534,7 @@ public abstract class AbstractSplitPanel extends AbstractComponentContainer {
      *
      * @since 7.5.0
      */
+    @FunctionalInterface
     public interface SplitPositionChangeListener
             extends ConnectorEventListener {
 
@@ -578,10 +580,9 @@ public abstract class AbstractSplitPanel extends AbstractComponentContainer {
 
     public Registration addSplitterClickListener(
             SplitterClickListener listener) {
-        addListener(EventId.CLICK_EVENT_IDENTIFIER, SplitterClickEvent.class,
-                listener, SplitterClickListener.clickMethod);
-        return () -> removeListener(EventId.CLICK_EVENT_IDENTIFIER,
-                SplitterClickEvent.class, listener);
+        return addListener(EventId.CLICK_EVENT_IDENTIFIER,
+                SplitterClickEvent.class, listener,
+                SplitterClickListener.clickMethod);
     }
 
     @Deprecated
@@ -593,15 +594,14 @@ public abstract class AbstractSplitPanel extends AbstractComponentContainer {
     /**
      * Register a listener to handle {@link SplitPositionChangeEvent}s.
      *
-     * @since 7.5.0
+     * @since 8.0
      * @param listener
      *            {@link SplitPositionChangeListener} to be registered.
      */
     public Registration addSplitPositionChangeListener(
             SplitPositionChangeListener listener) {
-        addListener(SplitPositionChangeEvent.class, listener,
+        return addListener(SplitPositionChangeEvent.class, listener,
                 SplitPositionChangeListener.moveMethod);
-        return () -> removeListener(SplitPositionChangeEvent.class, listener);
     }
 
     /**
@@ -707,8 +707,7 @@ public abstract class AbstractSplitPanel extends AbstractComponentContainer {
         super.writeDesign(design, designContext);
         // handle custom attributes (write only if a value is not the
         // default value)
-        AbstractSplitPanel def = (AbstractSplitPanel) designContext
-                .getDefaultInstance(this);
+        AbstractSplitPanel def = designContext.getDefaultInstance(this);
         if (getSplitPosition() != def.getSplitPosition()
                 || !def.getSplitPositionUnit().equals(getSplitPositionUnit())) {
             String splitPositionString = asString(getSplitPosition())

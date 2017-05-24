@@ -47,9 +47,9 @@ public class JavaScriptCallbackHelper implements Serializable {
 
     private static final Method CALL_METHOD = ReflectTools.findMethod(
             JavaScriptCallbackRpc.class, "call", String.class, JsonArray.class);
-    private AbstractClientConnector connector;
+    private final AbstractClientConnector connector;
 
-    private Map<String, JavaScriptFunction> callbacks = new HashMap<>();
+    private final Map<String, JavaScriptFunction> callbacks = new HashMap<>();
     private JavaScriptCallbackRpc javascriptCallbackRpc;
 
     public JavaScriptCallbackHelper(AbstractClientConnector connector) {
@@ -72,15 +72,12 @@ public class JavaScriptCallbackHelper implements Serializable {
 
     private void ensureRpc() {
         if (javascriptCallbackRpc == null) {
-            javascriptCallbackRpc = new JavaScriptCallbackRpc() {
-                @Override
-                public void call(String name, JsonArray arguments) {
-                    JavaScriptFunction callback = callbacks.get(name);
-                    try {
-                        callback.call(arguments);
-                    } catch (JsonException e) {
-                        throw new IllegalArgumentException(e);
-                    }
+            javascriptCallbackRpc = (String name, JsonArray arguments) -> {
+                JavaScriptFunction callback = callbacks.get(name);
+                try {
+                    callback.call(arguments);
+                } catch (JsonException e) {
+                    throw new IllegalArgumentException(e);
                 }
             };
             connector.registerRpc(javascriptCallbackRpc);

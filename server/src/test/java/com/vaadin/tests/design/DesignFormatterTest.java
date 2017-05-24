@@ -80,15 +80,15 @@ public class DesignFormatterTest {
         assertEquals("", formatter.format(true));
         assertEquals("false", formatter.format(false));
 
-        assertEquals(true, formatter.parse("true", boolean.class));
-        assertEquals(true, formatter.parse("foobar", boolean.class));
-        assertEquals(true, formatter.parse("", boolean.class));
-        assertEquals(false, formatter.parse("false", boolean.class));
+        Assert.assertTrue(formatter.parse("true", boolean.class));
+        Assert.assertTrue(formatter.parse("foobar", boolean.class));
+        Assert.assertTrue(formatter.parse("", boolean.class));
+        Assert.assertFalse(formatter.parse("false", boolean.class));
 
-        assertEquals(true, formatter.parse("true", Boolean.class));
-        assertEquals(true, formatter.parse("foobar", Boolean.class));
-        assertEquals(true, formatter.parse("", Boolean.class));
-        assertEquals(false, formatter.parse("false", Boolean.class));
+        Assert.assertTrue(formatter.parse("true", Boolean.class));
+        Assert.assertTrue(formatter.parse("foobar", Boolean.class));
+        Assert.assertTrue(formatter.parse("", Boolean.class));
+        Assert.assertFalse(formatter.parse("false", Boolean.class));
     }
 
     @Test
@@ -361,8 +361,7 @@ public class DesignFormatterTest {
                 && SharedUtil.equals(other.getIcon(), act.getIcon())
                 && act.getKeyCode() == other.getKeyCode()
                 && act.getModifiers().length == other.getModifiers().length) {
-            HashSet<Integer> thisSet = new HashSet<>(
-                    act.getModifiers().length);
+            HashSet<Integer> thisSet = new HashSet<>(act.getModifiers().length);
             // this is a bit tricky comparison, but there is no nice way of
             // making int[] into a Set
             for (int mod : act.getModifiers()) {

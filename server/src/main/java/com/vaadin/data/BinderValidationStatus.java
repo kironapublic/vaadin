@@ -22,19 +22,18 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.vaadin.data.Binder.Binding;
-import com.vaadin.data.validator.BeanValidator;
+import com.vaadin.data.Binder.BindingBuilder;
 
 /**
  * Binder validation status change. Represents the outcome of binder level
  * validation. Has information about the validation results for the
- * {@link Binding#withValidator(Validator) field level} and
- * {@link Binder#withValidator(Validator)binder level} validation.
+ * {@link BindingBuilder#withValidator(Validator) field level} and
+ * {@link Binder#withValidator(Validator) binder level} validation.
  * <p>
  * Note: if there are any field level validation errors, the bean level
  * validation is not run.
  * <p>
- * Use {@link Binder#setValidationStatusHandler(BinderStatusHandler)} to handle
+ * Use {@link Binder#setValidationStatusHandler(BinderValidationStatusHandler)} to handle
  * form level validation status changes.
  *
  * @author Vaadin Ltd
@@ -43,16 +42,16 @@ import com.vaadin.data.validator.BeanValidator;
  *            the bean type of the binder
  *
  * @see BinderValidationStatusHandler
- * @see Binder#setValidationStatusHandler(BinderStatusHandler)
+ * @see Binder#setValidationStatusHandler(BinderValidationStatusHandler)
  * @see Binder#validate()
- * @see ValidationStatus
+ * @see BindingValidationStatus
  *
  * @since 8.0
  */
 public class BinderValidationStatus<BEAN> implements Serializable {
 
     private final Binder<BEAN> binder;
-    private final List<ValidationStatus<?>> bindingStatuses;
+    private final List<BindingValidationStatus<?>> bindingStatuses;
     private final List<ValidationResult> binderStatuses;
 
     /**
@@ -71,8 +70,8 @@ public class BinderValidationStatus<BEAN> implements Serializable {
     public static <BEAN> BinderValidationStatus<BEAN> createUnresolvedStatus(
             Binder<BEAN> source) {
         return new BinderValidationStatus<>(source,
-                source.getBindings().stream()
-                        .map(b -> ValidationStatus.createUnresolvedStatus(b))
+                source.getBindings().stream().map(
+                        b -> BindingValidationStatus.createUnresolvedStatus(b))
                         .collect(Collectors.toList()),
                 Collections.emptyList());
     }
@@ -89,7 +88,7 @@ public class BinderValidationStatus<BEAN> implements Serializable {
      *            the validation results for binder level validation
      */
     public BinderValidationStatus(Binder<BEAN> source,
-            List<ValidationStatus<?>> bindingStatuses,
+            List<BindingValidationStatus<?>> bindingStatuses,
             List<ValidationResult> binderStatuses) {
         Objects.requireNonNull(binderStatuses,
                 "binding statuses cannot be null");
@@ -118,8 +117,9 @@ public class BinderValidationStatus<BEAN> implements Serializable {
     public boolean hasErrors() {
         return binderStatuses.stream().filter(ValidationResult::isError)
                 .findAny().isPresent()
-                || bindingStatuses.stream().filter(ValidationStatus::isError)
-                        .findAny().isPresent();
+                || bindingStatuses.stream()
+                        .filter(BindingValidationStatus::isError).findAny()
+                        .isPresent();
     }
 
     /**
@@ -149,21 +149,16 @@ public class BinderValidationStatus<BEAN> implements Serializable {
      * Gets the field level validation statuses.
      * <p>
      * The field level validtors have been added with
-     * {@link Binding#withValidator(Validator)}.
+     * {@link BindingBuilder#withValidator(Validator)}.
      *
      * @return the field validation statuses
      */
-    public List<ValidationStatus<?>> getFieldValidationStatuses() {
+    public List<BindingValidationStatus<?>> getFieldValidationStatuses() {
         return bindingStatuses;
     }
 
     /**
      * Gets the bean level validation results.
-     * <p>
-     * The bean level validators have been added with
-     * {@link Binder#withValidator(Validator)} or in case of a
-     * {@link BeanBinder} they might be automatically added {@link BeanValidator
-     * BeanValidators}.
      *
      * @return the bean level validation results
      */
@@ -175,22 +170,17 @@ public class BinderValidationStatus<BEAN> implements Serializable {
      * Gets the failed field level validation statuses.
      * <p>
      * The field level validtors have been added with
-     * {@link Binding#withValidator(Validator)}.
+     * {@link BindingBuilder#withValidator(Validator)}.
      *
      * @return a list of failed field level validation statuses
      */
-    public List<ValidationStatus<?>> getFieldValidationErrors() {
-        return bindingStatuses.stream().filter(ValidationStatus::isError)
+    public List<BindingValidationStatus<?>> getFieldValidationErrors() {
+        return bindingStatuses.stream().filter(BindingValidationStatus::isError)
                 .collect(Collectors.toList());
     }
 
     /**
      * Gets the failed bean level validation results.
-     * <p>
-     * The bean level validators have been added with
-     * {@link Binder#withValidator(Validator)} or in case of a
-     * {@link BeanBinder} they might be automatically added {@link BeanValidator
-     * BeanValidators}.
      *
      * @return a list of failed bean level validation results
      */

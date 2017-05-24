@@ -17,9 +17,9 @@ package com.vaadin.ui.declarative.converters;
 
 import java.util.Locale;
 
+import com.vaadin.data.Converter;
 import com.vaadin.data.Result;
-import com.vaadin.data.util.converter.Converter;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.ValueContext;
 import com.vaadin.ui.declarative.DesignAttributeHandler;
 
 /**
@@ -33,7 +33,7 @@ import com.vaadin.ui.declarative.DesignAttributeHandler;
 public class DesignEnumConverter<T extends Enum>
         implements Converter<String, T> {
 
-    private Class<T> type;
+    private final Class<T> type;
 
     /**
      * Creates a converter for the given enum type.
@@ -48,7 +48,7 @@ public class DesignEnumConverter<T extends Enum>
     @SuppressWarnings("unchecked")
     @Override
     public Result<T> convertToModel(String value, ValueContext context) {
-        if (value == null || value.trim().equals("")) {
+        if (value == null || value.trim().isEmpty()) {
             return Result.ok(null);
         }
         try {

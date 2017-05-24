@@ -20,7 +20,8 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
+import com.vaadin.shared.ui.MarginInfo;
 import com.vaadin.tests.server.component.DeclarativeMarginTestBase;
 import com.vaadin.ui.AbstractOrderedLayout;
 import com.vaadin.ui.Alignment;
@@ -37,12 +38,36 @@ import com.vaadin.ui.VerticalLayout;
 public class AbstractOrderedLayoutDeclarativeTest
         extends DeclarativeMarginTestBase<AbstractOrderedLayout> {
 
-    private List<String> defaultAlignments = Arrays
-            .asList(new String[] { ":top", ":left" });
+    private List<String> defaultAlignments = Arrays.asList(":top", ":left");
 
     @Test
-    public void testMargins() {
-        testMargins("vaadin-vertical-layout");
+    public void testMarginsVertical() {
+        testMargins("vaadin-vertical-layout", new MarginInfo(true));
+    }
+
+    @Test
+    public void testMarginsHorizontal() {
+        testMargins("vaadin-horizontal-layout", new MarginInfo(false));
+    }
+
+    @Test
+    public void testMarginsForm() {
+        testMargins("vaadin-form-layout", new MarginInfo(true, false));
+    }
+
+    @Test
+    public void testSpacingVertical() {
+        testSpacing("vaadin-vertical-layout", true);
+    }
+
+    @Test
+    public void testSpacingHorizontal() {
+        testSpacing("vaadin-horizontal-layout", true);
+    }
+
+    @Test
+    public void testSpacingForm() {
+        testSpacing("vaadin-form-layout", true);
     }
 
     @Test

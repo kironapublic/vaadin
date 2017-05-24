@@ -16,12 +16,10 @@
 package com.vaadin.tests.components.datefield;
 
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.shared.ui.datefield.Resolution;
+import com.vaadin.shared.ui.datefield.DateResolution;
 import com.vaadin.tests.components.AbstractReindeerTestUI;
-import com.vaadin.ui.AbstractDateField;
+import com.vaadin.ui.AbstractLocalDateField;
 import com.vaadin.ui.Button;
-import com.vaadin.ui.Button.ClickEvent;
-import com.vaadin.ui.Button.ClickListener;
 import com.vaadin.ui.DateField;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
@@ -34,8 +32,8 @@ public class DateFieldChangeResolution extends AbstractReindeerTestUI {
 
     @Override
     protected void setup(VaadinRequest request) {
-        final AbstractDateField dateField = new DateField("Enter date");
-        dateField.setResolution(Resolution.YEAR);
+        final AbstractLocalDateField dateField = new DateField("Enter date");
+        dateField.setResolution(DateResolution.YEAR);
         dateField.setId(DATEFIELD_ID);
         addComponent(dateField);
 
@@ -43,17 +41,12 @@ public class DateFieldChangeResolution extends AbstractReindeerTestUI {
         addComponent(l);
         HorizontalLayout hlayout = new HorizontalLayout();
         addComponent(hlayout);
-        for (final Resolution value : Resolution.values()) {
+        for (final DateResolution value : DateResolution.values()) {
             String resolutionString = value.toString().toLowerCase();
-            Button b = new Button(resolutionString);
-            b.addClickListener(new ClickListener() {
-                @Override
-                public void buttonClick(ClickEvent event) {
-                    dateField.setResolution(value);
-                }
-            });
-            b.setId(BUTTON_BASE_ID + resolutionString);
-            hlayout.addComponent(b);
+            Button button = new Button(resolutionString);
+            button.addClickListener(event -> dateField.setResolution(value));
+            button.setId(BUTTON_BASE_ID + resolutionString);
+            hlayout.addComponent(button);
         }
 
     }

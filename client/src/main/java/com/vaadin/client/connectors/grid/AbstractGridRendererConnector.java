@@ -35,7 +35,7 @@ import elemental.json.JsonObject;
  * @param <T>
  *            the presentation type of the renderer
  *
- * @since 7.4
+ * @since 8.0
  * @author Vaadin Ltd
  */
 public abstract class AbstractGridRendererConnector<T>
@@ -73,7 +73,7 @@ public abstract class AbstractGridRendererConnector<T>
 
     /**
      * Gets the grid connector for this renderer connector.
-     * 
+     *
      * @return the parent grid connector.
      */
     protected GridConnector getGridConnector() {

@@ -35,6 +35,8 @@ import com.vaadin.shared.ui.textfield.AbstractTextFieldState;
 import com.vaadin.ui.declarative.DesignAttributeHandler;
 import com.vaadin.ui.declarative.DesignContext;
 
+import elemental.json.Json;
+
 /**
  * Abstract base class for text input components.
  *
@@ -49,8 +51,8 @@ public abstract class AbstractTextField extends AbstractField<String>
 
         @Override
         public void setText(String text, int cursorPosition) {
-            getUI().getConnectorTracker().getDiffState(AbstractTextField.this)
-                    .put("text", text);
+            updateDiffstate("text", Json.create(text));
+
             lastKnownCursorPosition = cursorPosition;
             setValue(text, true);
         }
@@ -82,7 +84,7 @@ public abstract class AbstractTextField extends AbstractField<String>
     /**
      * Sets the value of this text field. If the new value is not equal to
      * {@code getValue()}, fires a {@link ValueChangeEvent}. Throws
-     * {@code NullPointerException} if the value is not null.
+     * {@code NullPointerException} if the value is null.
      *
      * @param value
      *            the new value, not {@code null}
@@ -132,6 +134,7 @@ public abstract class AbstractTextField extends AbstractField<String>
      *
      * @param placeholder
      *            the placeholder text to set
+     * @since 8.0
      */
     public void setPlaceholder(String placeholder) {
         getState().placeholder = placeholder;
@@ -199,10 +202,8 @@ public abstract class AbstractTextField extends AbstractField<String>
      * @see Registration
      */
     public Registration addFocusListener(FocusListener listener) {
-        addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
+        return addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
                 FocusListener.focusMethod);
-        return () -> removeListener(FocusEvent.EVENT_ID, FocusEvent.class,
-                listener);
     }
 
     /**
@@ -216,10 +217,8 @@ public abstract class AbstractTextField extends AbstractField<String>
      * @see Registration
      */
     public Registration addBlurListener(BlurListener listener) {
-        addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
+        return addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
                 BlurListener.blurMethod);
-        return () -> removeListener(BlurEvent.EVENT_ID, BlurEvent.class,
-                listener);
     }
 
     @Override
@@ -271,18 +270,10 @@ public abstract class AbstractTextField extends AbstractField<String>
         getState().text = value;
     }
 
-    /**
-     * Clears the value of this field.
-     */
-    public void clear() {
-        setValue("");
-    }
-
     @Override
     public void writeDesign(Element design, DesignContext designContext) {
         super.writeDesign(design, designContext);
-        AbstractTextField def = (AbstractTextField) designContext
-                .getDefaultInstance(this);
+        AbstractTextField def = designContext.getDefaultInstance(this);
         Attributes attr = design.attributes();
         DesignAttributeHandler.writeAttribute("maxlength", attr, getMaxLength(),
                 def.getMaxLength(), Integer.class, designContext);

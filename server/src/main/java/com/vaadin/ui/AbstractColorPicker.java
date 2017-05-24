@@ -22,9 +22,9 @@ import java.util.Objects;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Element;
 
+import com.vaadin.shared.ui.colorpicker.AbstractColorPickerState;
 import com.vaadin.shared.ui.colorpicker.Color;
 import com.vaadin.shared.ui.colorpicker.ColorPickerServerRpc;
-import com.vaadin.shared.ui.colorpicker.ColorPickerState;
 import com.vaadin.ui.components.colorpicker.ColorPickerPopup;
 import com.vaadin.ui.declarative.DesignAttributeHandler;
 import com.vaadin.ui.declarative.DesignContext;
@@ -75,7 +75,7 @@ public abstract class AbstractColorPicker extends AbstractField<Color> {
         /** A simple popup with only the swatches (palette) tab. */
         POPUP_SIMPLE("simple");
 
-        private String style;
+        private final String style;
 
         PopupStyle(String styleName) {
             style = styleName;
@@ -87,13 +87,7 @@ public abstract class AbstractColorPicker extends AbstractField<Color> {
         }
     }
 
-    private ColorPickerServerRpc rpc = new ColorPickerServerRpc() {
-
-        @Override
-        public void openPopup(boolean open) {
-            showPopup(open);
-        }
-    };
+    private ColorPickerServerRpc rpc = this::showPopup;
 
     protected static final String STYLENAME_DEFAULT = "v-colorpicker";
     protected static final String STYLENAME_BUTTON = "v-button";
@@ -396,13 +390,13 @@ public abstract class AbstractColorPicker extends AbstractField<Color> {
     }
 
     @Override
-    protected ColorPickerState getState() {
-        return (ColorPickerState) super.getState();
+    protected AbstractColorPickerState getState() {
+        return (AbstractColorPickerState) super.getState();
     }
 
     @Override
-    protected ColorPickerState getState(boolean markAsDirty) {
-        return (ColorPickerState) super.getState(markAsDirty);
+    protected AbstractColorPickerState getState(boolean markAsDirty) {
+        return (AbstractColorPickerState) super.getState(markAsDirty);
     }
 
     /**

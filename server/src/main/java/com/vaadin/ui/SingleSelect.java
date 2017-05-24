@@ -19,9 +19,10 @@ import com.vaadin.data.HasValue;
 
 /**
  * Single selection component whose selection is treated as a value.
- * 
+ *
  * @author Vaadin Ltd
- * 
+ * @since 8.0
+ *
  * @param <V>
  *            the selection value type
  *

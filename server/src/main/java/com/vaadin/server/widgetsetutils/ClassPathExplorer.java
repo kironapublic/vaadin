@@ -58,14 +58,11 @@ public class ClassPathExplorer {
     /**
      * File filter that only accepts directories.
      */
-    private final static FileFilter DIRECTORIES_ONLY = new FileFilter() {
-        @Override
-        public boolean accept(File f) {
-            if (f.exists() && f.isDirectory()) {
-                return true;
-            } else {
-                return false;
-            }
+    private final static FileFilter DIRECTORIES_ONLY = (File f) -> {
+        if (f.exists() && f.isDirectory()) {
+            return true;
+        } else {
+            return false;
         }
     };
 
@@ -101,21 +98,21 @@ public class ClassPathExplorer {
      * entries that could include widgets/widgetsets are listed (primarily
      * directories, Vaadin JARs and add-on JARs).
      */
-    private static List<String> rawClasspathEntries = getRawClasspathEntries();
+    private static final List<String> rawClasspathEntries = getRawClasspathEntries();
 
     /**
      * Map from identifiers (either a package name preceded by the path and a
      * slash, or a URL for a JAR file) to the corresponding URLs. This is
      * constructed from the class path.
      */
-    private static Map<String, URL> classpathLocations = getClasspathLocations(
+    private static final Map<String, URL> classpathLocations = getClasspathLocations(
             rawClasspathEntries);
 
     private static boolean debug = false;
 
     static {
         String debugProperty = System.getProperty("debug");
-        if (debugProperty != null && !debugProperty.equals("")) {
+        if (debugProperty != null && !debugProperty.isEmpty()) {
             debug = true;
         }
     }
@@ -212,7 +209,7 @@ public class ClassPathExplorer {
                 // remove the .gwt.xml extension
                 String classname = files[i].substring(0, files[i].length() - 8);
                 String packageName = locationString
-                    .substring(locationString.lastIndexOf('/') + 1);
+                        .substring(locationString.lastIndexOf('/') + 1);
                 classname = packageName + "." + classname;
 
                 if (!WidgetSetBuilder.isWidgetset(classname)) {
@@ -273,9 +270,9 @@ public class ClassPathExplorer {
                             .getValue("Vaadin-Widgetsets");
                     if (value != null) {
                         String[] widgetsetNames = value.split(",");
-                        for (int i = 0; i < widgetsetNames.length; i++) {
-                            String widgetsetname = widgetsetNames[i].trim();
-                            if (!widgetsetname.equals("")) {
+                        for (String widgetsetName : widgetsetNames) {
+                            String widgetsetname = widgetsetName.trim();
+                            if (!widgetsetname.isEmpty()) {
                                 widgetsets.put(widgetsetname, location);
                             }
                         }
@@ -286,9 +283,9 @@ public class ClassPathExplorer {
                             .getValue("Vaadin-Stylesheets");
                     if (value != null) {
                         String[] stylesheets = value.split(",");
-                        for (int i = 0; i < stylesheets.length; i++) {
-                            String stylesheet = stylesheets[i].trim();
-                            if (!stylesheet.equals("")) {
+                        for (String stylesheet1 : stylesheets) {
+                            String stylesheet = stylesheet1.trim();
+                            if (!stylesheet.isEmpty()) {
                                 addonStyles.put(stylesheet, location);
                             }
                         }
@@ -479,7 +476,7 @@ public class ClassPathExplorer {
     /**
      * Add a jar file to locations - see {@link #classpathLocations}.
      *
-     * @param name
+     * @param file
      * @param locations
      */
     private static void includeJar(File file, Map<String, URL> locations) {

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,8 +30,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.data.Binder.Binding;
-import com.vaadin.data.util.converter.StringToIntegerConverter;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.Binder.BindingBuilder;
+import com.vaadin.data.converter.StringToIntegerConverter;
 import com.vaadin.data.validator.NotEmptyValidator;
 import com.vaadin.server.AbstractErrorMessage;
 import com.vaadin.server.ErrorMessage;
@@ -43,7 +44,7 @@ import com.vaadin.ui.TextField;
 public class BinderConverterValidatorTest
         extends BinderTestBase<Binder<Person>, Person> {
 
-    private static class StatusBean {
+    private static class StatusBean implements Serializable {
         private String status;
 
         public String getStatus() {
@@ -73,7 +74,7 @@ public class BinderConverterValidatorTest
 
     @Test
     public void bound_validatorsAreOK_noErrors() {
-        Binding<Person, String, String> binding = binder.forField(nameField);
+        BindingBuilder<Person, String> binding = binder.forField(nameField);
         binding.withValidator(Validator.alwaysPass()).bind(Person::getFirstName,
                 Person::setFirstName);
 
@@ -87,26 +88,23 @@ public class BinderConverterValidatorTest
     @SuppressWarnings("serial")
     @Test
     public void bound_validatorsFail_errors() {
-        Binding<Person, String, String> binding = binder.forField(nameField);
+        BindingBuilder<Person, String> binding = binder.forField(nameField);
         binding.withValidator(Validator.alwaysPass());
         String msg1 = "foo";
         String msg2 = "bar";
-        binding.withValidator(new Validator<String>() {
-            @Override
-            public ValidationResult apply(String value, ValueContext context) {
-                return ValidationResult.error(msg1);
-            }
-        });
+        binding.withValidator((String value,
+                ValueContext context) -> ValidationResult.error(msg1));
         binding.withValidator(value -> false, msg2);
         binding.bind(Person::getFirstName, Person::setFirstName);
 
         BinderValidationStatus<Person> status = binder.validate();
-        List<ValidationStatus<?>> errors = status.getFieldValidationErrors();
+        List<BindingValidationStatus<?>> errors = status
+                .getFieldValidationErrors();
 
         assertEquals(1, errors.size());
 
-        ValidationStatus<?> validationStatus = errors.stream().findFirst()
-                .get();
+        BindingValidationStatus<?> validationStatus = errors.stream()
+                .findFirst().get();
         String msg = validationStatus.getMessage().get();
         assertEquals(msg1, msg);
 
@@ -170,7 +168,7 @@ public class BinderConverterValidatorTest
     }
 
     private void assertValidationErrors(
-            List<ValidationStatus<?>> validationErrors,
+            List<BindingValidationStatus<?>> validationErrors,
             String... errorMessages) {
         assertEquals(errorMessages.length, validationErrors.size());
         for (int i = 0; i < errorMessages.length; i++) {
@@ -205,16 +203,16 @@ public class BinderConverterValidatorTest
     @Test
     public void convertDataToField() {
         bindAgeWithValidatorConverterValidator();
-        binder.getBean().get().setAge(12);
-        binder.readBean(binder.getBean().get());
+        binder.getBean().setAge(12);
+        binder.readBean(binder.getBean());
         assertEquals("12", ageField.getValue());
     }
 
     @Test
     public void convertNotValidatableDataToField() {
         bindAgeWithValidatorConverterValidator();
-        binder.getBean().get().setAge(-12);
-        binder.readBean(binder.getBean().get());
+        binder.getBean().setAge(-12);
+        binder.readBean(binder.getBean());
         assertEquals("-12", ageField.getValue());
     }
 
@@ -225,7 +223,7 @@ public class BinderConverterValidatorTest
         bean.setStatus("1");
         Binder<StatusBean> binder = new Binder<>();
 
-        Binding<StatusBean, String, String> binding = binder.forField(field)
+        BindingBuilder<StatusBean, String> binding = binder.forField(field)
                 .withConverter(presentation -> {
                     if (presentation.equals("OK")) {
                         return "1";
@@ -261,7 +259,7 @@ public class BinderConverterValidatorTest
         Person person = new Person();
         binder.setBean(person);
 
-        List<ValidationStatus<?>> errors = binder.validate()
+        List<BindingValidationStatus<?>> errors = binder.validate()
                 .getFieldValidationErrors();
         assertEquals(0, errors.size());
     }
@@ -270,7 +268,7 @@ public class BinderConverterValidatorTest
     public void validate_failedBeanValidatorWithFieldValidator() {
         String msg = "foo";
 
-        Binding<Person, String, String> binding = binder.forField(nameField)
+        BindingBuilder<Person, String> binding = binder.forField(nameField)
                 .withValidator(new NotEmptyValidator<>(msg));
         binding.bind(Person::getFirstName, Person::setFirstName);
 
@@ -278,10 +276,10 @@ public class BinderConverterValidatorTest
         Person person = new Person();
         binder.setBean(person);
 
-        List<ValidationStatus<?>> errors = binder.validate()
+        List<BindingValidationStatus<?>> errors = binder.validate()
                 .getFieldValidationErrors();
         assertEquals(1, errors.size());
-        ValidationStatus<?> error = errors.get(0);
+        BindingValidationStatus<?> error = errors.get(0);
         assertEquals(msg, error.getMessage().get());
         assertEquals(nameField, error.getField());
     }
@@ -290,7 +288,7 @@ public class BinderConverterValidatorTest
     public void validate_failedBothBeanValidatorAndFieldValidator() {
         String msg1 = "foo";
 
-        Binding<Person, String, String> binding = binder.forField(nameField)
+        BindingBuilder<Person, String> binding = binder.forField(nameField)
                 .withValidator(new NotEmptyValidator<>(msg1));
         binding.bind(Person::getFirstName, Person::setFirstName);
 
@@ -299,11 +297,11 @@ public class BinderConverterValidatorTest
         Person person = new Person();
         binder.setBean(person);
 
-        List<ValidationStatus<?>> errors = binder.validate()
+        List<BindingValidationStatus<?>> errors = binder.validate()
                 .getFieldValidationErrors();
         assertEquals(1, errors.size());
 
-        ValidationStatus<?> error = errors.get(0);
+        BindingValidationStatus<?> error = errors.get(0);
 
         assertEquals(msg1, error.getMessage().get());
         assertEquals(nameField, error.getField());
@@ -326,7 +324,7 @@ public class BinderConverterValidatorTest
     @Test
     public void binder_saveIfValid() {
         String msg1 = "foo";
-        Binding<Person, String, String> binding = binder.forField(nameField)
+        BindingBuilder<Person, String> binding = binder.forField(nameField)
                 .withValidator(new NotEmptyValidator<>(msg1));
         binding.bind(Person::getFirstName, Person::setFirstName);
 
@@ -356,8 +354,8 @@ public class BinderConverterValidatorTest
         bindName();
 
         AtomicBoolean beanLevelValidationRun = new AtomicBoolean();
-        binder.withValidator(Validator.<Person> from(
-                bean -> beanLevelValidationRun.getAndSet(true), ""));
+        binder.withValidator(Validator
+                .from(bean -> beanLevelValidationRun.getAndSet(true), ""));
 
         ageField.setValue("not a number");
 
@@ -373,8 +371,8 @@ public class BinderConverterValidatorTest
         bindName();
 
         AtomicBoolean beanLevelValidationRun = new AtomicBoolean();
-        binder.withValidator(Validator.<Person> from(
-                bean -> beanLevelValidationRun.getAndSet(true), ""));
+        binder.withValidator(Validator
+                .from(bean -> beanLevelValidationRun.getAndSet(true), ""));
 
         ageField.setValue(String.valueOf(12));
 
@@ -391,19 +389,42 @@ public class BinderConverterValidatorTest
         binder.setBean(item);
         assertFalse(binder.hasChanges());
 
+        // Bound binder + valid user changes: hasChanges == false
         nameField.setValue("foo");
-        assertTrue(binder.hasChanges());
-        binder.readBean(item);
         assertFalse(binder.hasChanges());
 
         nameField.setValue("bar");
         binder.writeBeanIfValid(new Person());
         assertFalse(binder.hasChanges());
 
-        nameField.setValue("baz");
-        binder.writeBean(new Person());
+        // Bound binder + invalid user changes: hasChanges() == true
+        nameField.setValue("");
+        binder.writeBeanIfValid(new Person());
+        assertTrue(binder.hasChanges());
+
+        // Read bean resets hasChanges
+        binder.readBean(item);
         assertFalse(binder.hasChanges());
 
+        // Removing a bound bean resets hasChanges
+        nameField.setValue("");
+        assertTrue(binder.hasChanges());
+        binder.removeBean();
+        assertFalse(binder.hasChanges());
+
+        // Unbound binder + valid user changes: hasChanges() == true
+        nameField.setValue("foo");
+        assertTrue(binder.hasChanges());
+
+        // successful writeBean resets hasChanges to false
+        binder.writeBeanIfValid(new Person());
+        assertFalse(binder.hasChanges());
+
+        // Unbound binder + invalid user changes: hasChanges() == true
+        nameField.setValue("");
+        assertTrue(binder.hasChanges());
+
+        // unsuccessful writeBean doesn't affect hasChanges
         nameField.setValue("");
         binder.writeBeanIfValid(new Person());
         assertTrue(binder.hasChanges());
@@ -496,7 +517,7 @@ public class BinderConverterValidatorTest
                 Person::setFirstName);
 
         String msg = "foo";
-        binder.withValidator(Validator.<Person> from(
+        binder.withValidator(Validator.from(
                 prsn -> prsn.getAddress() != null || prsn.getEmail() != null,
                 msg));
 
@@ -535,11 +556,11 @@ public class BinderConverterValidatorTest
     public void save_validationErrors_exceptionContainsErrors()
             throws ValidationException {
         String msg = "foo";
-        Binding<Person, String, String> nameBinding = binder.forField(nameField)
+        BindingBuilder<Person, String> nameBinding = binder.forField(nameField)
                 .withValidator(new NotEmptyValidator<>(msg));
         nameBinding.bind(Person::getFirstName, Person::setFirstName);
 
-        Binding<Person, String, Integer> ageBinding = binder.forField(ageField)
+        BindingBuilder<Person, Integer> ageBinding = binder.forField(ageField)
                 .withConverter(stringToInteger).withValidator(notNegative);
         ageBinding.bind(Person::getAge, Person::setAge);
 
@@ -550,10 +571,10 @@ public class BinderConverterValidatorTest
             binder.writeBean(person);
             Assert.fail();
         } catch (ValidationException exception) {
-            List<ValidationStatus<?>> validationErrors = exception
+            List<BindingValidationStatus<?>> validationErrors = exception
                     .getFieldValidationErrors();
             Assert.assertEquals(2, validationErrors.size());
-            ValidationStatus<?> error = validationErrors.get(0);
+            BindingValidationStatus<?> error = validationErrors.get(0);
             Assert.assertEquals(nameField, error.getField());
             Assert.assertEquals(msg, error.getMessage().get());
 
@@ -566,7 +587,7 @@ public class BinderConverterValidatorTest
 
     @Test
     public void binderBindAndLoad_clearsErrors() {
-        Binding<Person, String, String> binding = binder.forField(nameField)
+        BindingBuilder<Person, String> binding = binder.forField(nameField)
                 .withValidator(notEmpty);
         binding.bind(Person::getFirstName, Person::setFirstName);
         binder.withValidator(bean -> !bean.getFirstName().contains("error"),
@@ -602,8 +623,8 @@ public class BinderConverterValidatorTest
         // bind a new field that has invalid value in bean
         TextField lastNameField = new TextField();
         person.setLastName("");
-        Binding<Person, String, String> binding2 = binder
-                .forField(lastNameField).withValidator(notEmpty);
+        BindingBuilder<Person, String> binding2 = binder.forField(lastNameField)
+                .withValidator(notEmpty);
         binding2.bind(Person::getLastName, Person::setLastName);
 
         // should not have error shown
@@ -644,16 +665,15 @@ public class BinderConverterValidatorTest
         final SerializablePredicate<String> lengthPredicate = v -> v
                 .length() > 2;
 
-        Binding<Person, String, String> firstNameBinding = binder
+        BindingBuilder<Person, String> firstNameBinding = binder
                 .forField(nameField).withValidator(lengthPredicate, "length");
         firstNameBinding.bind(Person::getFirstName, Person::setFirstName);
 
-        Binding<Person, String, String> lastNameBinding = binder
-                .forField(lastNameField)
+        Binding<Person, String> lastNameBinding = binder.forField(lastNameField)
                 .withValidator(v -> !nameField.getValue().isEmpty()
                         || lengthPredicate.test(v), "err")
-                .withValidator(lengthPredicate, "length");
-        lastNameBinding.bind(Person::getLastName, Person::setLastName);
+                .withValidator(lengthPredicate, "length")
+                .bind(Person::getLastName, Person::setLastName);
 
         // this will be triggered as a new bean is bound with binder.bind(),
         // causing a validation error to be visible until reset is done

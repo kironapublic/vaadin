@@ -4,8 +4,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.vaadin.data.Result;
-import com.vaadin.data.util.converter.StringToDoubleConverter;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.ValueContext;
+import com.vaadin.data.converter.StringToDoubleConverter;
 
 public class StringToDoubleConverterTest extends AbstractConverterTest {
 
@@ -33,6 +33,16 @@ public class StringToDoubleConverterTest extends AbstractConverterTest {
                 new ValueContext());
         Assert.assertTrue(result.isError());
         Assert.assertEquals("Failed", result.getMessage().get());
+    }
+
+    @Test
+    public void customEmptyValue() {
+        StringToDoubleConverter converter = new StringToDoubleConverter(0.0,
+                getErrorMessage());
+
+        assertValue(0.0, converter.convertToModel("", new ValueContext()));
+        Assert.assertEquals("0",
+                converter.convertToPresentation(0.0, new ValueContext()));
     }
 
 }

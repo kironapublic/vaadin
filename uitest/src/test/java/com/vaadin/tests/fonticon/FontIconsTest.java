@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.junit.Test;
 import org.openqa.selenium.Keys;
 
-import com.vaadin.testbench.customelements.ComboBoxElement;
+import com.vaadin.testbench.elements.ComboBoxElement;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
 public class FontIconsTest extends MultiBrowserTest {
@@ -30,7 +30,7 @@ public class FontIconsTest extends MultiBrowserTest {
     @Test
     public void checkScreenshot() throws IOException {
         openTestURL();
-        compareScreen("allFontIcons");
+        compareScreen("allVaadinIcons");
     }
 
     @Test

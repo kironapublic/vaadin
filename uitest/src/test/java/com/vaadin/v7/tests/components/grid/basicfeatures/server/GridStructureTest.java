@@ -31,7 +31,7 @@ import org.openqa.selenium.WebElement;
 
 import com.vaadin.testbench.By;
 import com.vaadin.testbench.TestBenchElement;
-import com.vaadin.testbench.customelements.GridElement;
+import com.vaadin.testbench.elements.GridElement;
 import com.vaadin.testbench.elements.GridElement.GridCellElement;
 import com.vaadin.testbench.elements.NotificationElement;
 import com.vaadin.v7.tests.components.grid.basicfeatures.GridBasicFeatures;
@@ -513,5 +513,19 @@ public class GridStructureTest extends GridBasicFeaturesTest {
         openTestURL();
         selectMenuPath("Component", "Body rows", "Add third row");
         assertFalse(logContainsText("Exception occured"));
+    }
+
+    @Test
+    public void getBodyRowCountJS() {
+        openTestURL();
+        GridElement grid = $(GridElement.class).first();
+        assertEquals(1000L,
+                executeScript("return arguments[0].getBodyRowCount()", grid));
+        selectMenuPath("Component", "Body rows", "Remove all rows");
+        assertEquals(0L,
+                executeScript("return arguments[0].getBodyRowCount()", grid));
+        selectMenuPath("Component", "Body rows", "Add first row");
+        assertEquals(1L,
+                executeScript("return arguments[0].getBodyRowCount()", grid));
     }
 }

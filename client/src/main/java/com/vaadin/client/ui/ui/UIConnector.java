@@ -16,6 +16,11 @@
 package com.vaadin.client.ui.ui;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
@@ -37,19 +42,18 @@ import com.google.gwt.event.dom.client.ScrollEvent;
 import com.google.gwt.event.dom.client.ScrollHandler;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
-import com.google.gwt.http.client.URL;
+import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
-import com.google.gwt.user.client.Window.Location;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.Widget;
-import com.google.web.bindery.event.shared.HandlerRegistration;
 import com.vaadin.client.ApplicationConnection;
 import com.vaadin.client.ApplicationConnection.ApplicationStoppedEvent;
+import com.vaadin.client.BrowserInfo;
 import com.vaadin.client.ComponentConnector;
 import com.vaadin.client.ConnectorHierarchyChangeEvent;
 import com.vaadin.client.Focusable;
@@ -75,14 +79,19 @@ import com.vaadin.client.ui.VUI;
 import com.vaadin.client.ui.VWindow;
 import com.vaadin.client.ui.layout.MayScrollChildren;
 import com.vaadin.client.ui.window.WindowConnector;
+import com.vaadin.client.ui.window.WindowOrderEvent;
+import com.vaadin.client.ui.window.WindowOrderHandler;
 import com.vaadin.server.Page.Styles;
 import com.vaadin.shared.ApplicationConstants;
+import com.vaadin.shared.Connector;
+import com.vaadin.shared.EventId;
 import com.vaadin.shared.MouseEventDetails;
 import com.vaadin.shared.Version;
 import com.vaadin.shared.communication.MethodInvocation;
 import com.vaadin.shared.ui.ComponentStateUtil;
 import com.vaadin.shared.ui.Connect;
 import com.vaadin.shared.ui.Connect.LoadStyle;
+import com.vaadin.shared.ui.WindowOrderRpc;
 import com.vaadin.shared.ui.ui.DebugWindowClientRpc;
 import com.vaadin.shared.ui.ui.DebugWindowServerRpc;
 import com.vaadin.shared.ui.ui.PageClientRpc;
@@ -95,6 +104,8 @@ import com.vaadin.shared.ui.ui.UIState;
 import com.vaadin.shared.util.SharedUtil;
 import com.vaadin.ui.UI;
 
+import elemental.client.Browser;
+
 @Connect(value = UI.class, loadStyle = LoadStyle.EAGER)
 public class UIConnector extends AbstractSingleComponentContainerConnector
         implements Paintable, MayScrollChildren {
@@ -102,6 +113,14 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
     private HandlerRegistration childStateChangeHandlerRegistration;
 
     private String activeTheme = null;
+
+    private HandlerRegistration windowOrderRegistration;
+
+    /*
+     * Used to workaround IE bug related to popstate events and certain fragment
+     * only changes
+     */
+    private String currentLocation;
 
     private final StateChangeHandler childStateChangeHandler = new StateChangeHandler() {
         @Override
@@ -112,9 +131,33 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
         }
     };
 
+    private WindowOrderHandler windowOrderHandler = new WindowOrderHandler() {
+
+        @Override
+        public void onWindowOrderChange(WindowOrderEvent event) {
+            VWindow[] windows = event.getWindows();
+            HashMap<Integer, Connector> orders = new HashMap<>();
+            boolean hasEventListener = hasEventListener(EventId.WINDOW_ORDER);
+            for (VWindow window : windows) {
+                Connector connector = Util.findConnectorFor(window);
+                orders.put(window.getWindowOrder(), connector);
+                if (connector instanceof AbstractConnector
+                        && ((AbstractConnector) connector)
+                                .hasEventListener(EventId.WINDOW_ORDER)) {
+                    hasEventListener = true;
+                }
+            }
+            if (hasEventListener) {
+                getRpcProxy(WindowOrderRpc.class).windowOrderChanged(orders);
+            }
+        }
+    };
+
     @Override
     protected void init() {
         super.init();
+        windowOrderRegistration = VWindow
+                .addWindowOrderHandler(windowOrderHandler);
         registerRpc(PageClientRpc.class, new PageClientRpc() {
 
             @Override
@@ -172,8 +215,8 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
         getWidget().addResizeHandler(new ResizeHandler() {
             @Override
             public void onResize(ResizeEvent event) {
-                getRpcProxy(UIServerRpc.class).resize(event.getHeight(),
-                        event.getWidth(), Window.getClientWidth(),
+                getRpcProxy(UIServerRpc.class).resize(event.getWidth(),
+                        event.getHeight(), Window.getClientWidth(),
                         Window.getClientHeight());
                 getConnection().getServerRpcQueue().flush();
             }
@@ -196,6 +239,28 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
                 }
             }
         });
+
+        Browser.getWindow().setOnpopstate(evt -> {
+            final String newLocation = Browser.getWindow().getLocation()
+                    .toString();
+            getRpcProxy(UIServerRpc.class).popstate(newLocation);
+            currentLocation = newLocation;
+        });
+        // IE doesn't fire popstate correctly with certain hash changes.
+        // Simulate the missing event with History handler.
+        if (BrowserInfo.get().isIE()) {
+            History.addValueChangeHandler(evt -> {
+                final String newLocation = Browser.getWindow().getLocation()
+                        .toString();
+                if (!newLocation.equals(currentLocation)) {
+                    currentLocation = newLocation;
+                    getRpcProxy(UIServerRpc.class).popstate(
+                            Browser.getWindow().getLocation().toString());
+                }
+            });
+            currentLocation = Browser.getWindow().getLocation().toString();
+        }
+
     }
 
     private native void open(String url, String name)
@@ -366,34 +431,13 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
             scrollIntoView(connector);
         }
 
-        if (uidl.hasAttribute(UIConstants.LOCATION_VARIABLE)) {
-            String location = uidl
-                    .getStringAttribute(UIConstants.LOCATION_VARIABLE);
-            String newFragment;
-
-            int fragmentIndex = location.indexOf('#');
-            if (fragmentIndex >= 0) {
-                // Decode fragment to avoid double encoding (#10769)
-                newFragment = URL.decodePathSegment(
-                        location.substring(fragmentIndex + 1));
-
-                if (newFragment.isEmpty()
-                        && Location.getHref().indexOf('#') == -1) {
-                    // Ensure there is a trailing # even though History and
-                    // Location.getHash() treat null and "" the same way.
-                    Location.assign(Location.getHref() + "#");
-                }
-            } else {
-                // No fragment in server-side location, but can't completely
-                // remove the browser fragment since that would reload the page
-                newFragment = "";
-            }
-
-            getWidget().currentFragment = newFragment;
-
-            if (!newFragment.equals(History.getToken())) {
-                History.newItem(newFragment, true);
-            }
+        if (uidl.hasAttribute(UIConstants.ATTRIBUTE_PUSH_STATE)) {
+            Browser.getWindow().getHistory().pushState(null, "",
+                    uidl.getStringAttribute(UIConstants.ATTRIBUTE_PUSH_STATE));
+        }
+        if (uidl.hasAttribute(UIConstants.ATTRIBUTE_REPLACE_STATE)) {
+            Browser.getWindow().getHistory().replaceState(null, "", uidl
+                    .getStringAttribute(UIConstants.ATTRIBUTE_REPLACE_STATE));
         }
 
         if (firstPaint) {
@@ -490,6 +534,9 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
         shortcutContextWidget.addDomHandler(new KeyDownHandler() {
             @Override
             public void onKeyDown(KeyDownEvent event) {
+                if (VWindow.isModalWindowOpen()) {
+                    return;
+                }
                 if (getWidget().actionHandler != null) {
                     Element target = Element
                             .as(event.getNativeEvent().getEventTarget());
@@ -702,6 +749,8 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
 
             }
         }
+
+        setWindowOrderAndPosition();
 
         // Close removed sub windows
         for (ComponentConnector c : event.getOldChildren()) {
@@ -1115,13 +1164,49 @@ public class UIConnector extends AbstractSingleComponentContainerConnector
         return Logger.getLogger(UIConnector.class.getName());
     }
 
-    /**
-     * Send an acknowledgement RPC to the server. This allows the server to know
-     * which messages the client has received, even when the client is not
-     * sending any other traffic.
-     */
-    public void sendAck() {
-        getRpcProxy(UIServerRpc.class).acknowledge();
+    private void setWindowOrderAndPosition() {
+        if (windowOrderRegistration != null) {
+            windowOrderRegistration.removeHandler();
+        }
+        WindowOrderCollector collector = new WindowOrderCollector();
+        HandlerRegistration registration = VWindow
+                .addWindowOrderHandler(collector);
+        for (ComponentConnector c : getChildComponents()) {
+            if (c instanceof WindowConnector) {
+                WindowConnector wc = (WindowConnector) c;
+                wc.setWindowOrderAndPosition();
+            }
+        }
+        windowOrderHandler.onWindowOrderChange(
+                new WindowOrderEvent(collector.getWindows()));
+        registration.removeHandler();
+        windowOrderRegistration = VWindow
+                .addWindowOrderHandler(windowOrderHandler);
+    }
 
+    private static class WindowOrderCollector
+            implements WindowOrderHandler, Comparator<VWindow> {
+
+        private HashSet<VWindow> windows = new HashSet<>();
+
+        @Override
+        public void onWindowOrderChange(WindowOrderEvent event) {
+            windows.addAll(Arrays.asList(event.getWindows()));
+        }
+
+        @Override
+        public int compare(VWindow window1, VWindow window2) {
+            if (window1.getWindowOrder() == window2.getWindowOrder()) {
+                return 0;
+            }
+            return window1.getWindowOrder() > window2.getWindowOrder() ? 1 : -1;
+        }
+
+        ArrayList<VWindow> getWindows() {
+            ArrayList<VWindow> result = new ArrayList<>();
+            result.addAll(windows);
+            Collections.sort(result, this);
+            return result;
+        }
     }
 }

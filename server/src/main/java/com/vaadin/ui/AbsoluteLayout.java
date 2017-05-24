@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Element;
@@ -55,17 +54,12 @@ public class AbsoluteLayout extends AbstractLayout
     private static final String ATTR_LEFT = ":left";
     private static final String ATTR_Z_INDEX = ":z-index";
 
-    private AbsoluteLayoutServerRpc rpc = new AbsoluteLayoutServerRpc() {
-
-        @Override
-        public void layoutClick(MouseEventDetails mouseDetails,
-                Connector clickedConnector) {
-            fireEvent(LayoutClickEvent.createEvent(AbsoluteLayout.this,
-                    mouseDetails, clickedConnector));
-        }
-    };
+    private final AbsoluteLayoutServerRpc rpc = (MouseEventDetails mouseDetails,
+            Connector clickedConnector) -> fireEvent(
+                    LayoutClickEvent.createEvent(AbsoluteLayout.this,
+                            mouseDetails, clickedConnector));
     // Maps each component to a position
-    private LinkedHashMap<Component, ComponentPosition> componentToCoordinates = new LinkedHashMap<>();
+    private final LinkedHashMap<Component, ComponentPosition> componentToCoordinates = new LinkedHashMap<>();
 
     /**
      * Creates an AbsoluteLayout with full size.
@@ -78,6 +72,11 @@ public class AbsoluteLayout extends AbstractLayout
     @Override
     protected AbsoluteLayoutState getState() {
         return (AbsoluteLayoutState) super.getState();
+    }
+
+    @Override
+    protected AbsoluteLayoutState getState(boolean markAsDirty) {
+        return (AbsoluteLayoutState) super.getState(markAsDirty);
     }
 
     /**
@@ -304,7 +303,7 @@ public class AbsoluteLayout extends AbstractLayout
             for (int i = 0; i < cssProperties.length; i++) {
                 String[] keyValuePair = cssProperties[i].split(":");
                 String key = keyValuePair[0].trim();
-                if (key.equals("")) {
+                if (key.isEmpty()) {
                     continue;
                 }
                 if (key.equals("z-index")) {
@@ -317,7 +316,7 @@ public class AbsoluteLayout extends AbstractLayout
                         value = "";
                     }
                     String symbol = value.replaceAll("[0-9\\.\\-]+", "");
-                    if (!symbol.equals("")) {
+                    if (!symbol.isEmpty()) {
                         value = value.substring(0, value.indexOf(symbol))
                                 .trim();
                     }
@@ -404,7 +403,7 @@ public class AbsoluteLayout extends AbstractLayout
          *
          * @param bottomValue
          *            The value of the 'bottom' attribute
-         * @param units
+         * @param bottomUnits
          *            The unit of the 'bottom' attribute. See UNIT_SYMBOLS for a
          *            description of the available units.
          */
@@ -420,7 +419,7 @@ public class AbsoluteLayout extends AbstractLayout
          *
          * @param leftValue
          *            The value of the 'left' attribute
-         * @param units
+         * @param leftUnits
          *            The unit of the 'left' attribute. See UNIT_SYMBOLS for a
          *            description of the available units.
          */
@@ -480,7 +479,7 @@ public class AbsoluteLayout extends AbstractLayout
          *
          * @param rightValue
          *            The value of the 'right' attribute
-         * @see #setRightUnits(int)
+         * @see #setRightUnits(Unit)
          */
         public void setRightValue(Float rightValue) {
             this.rightValue = rightValue;
@@ -504,7 +503,7 @@ public class AbsoluteLayout extends AbstractLayout
          *
          * @param bottomValue
          *            The value of the 'bottom' attribute
-         * @see #setBottomUnits(int)
+         * @see #setBottomUnits(Unit)
          */
         public void setBottomValue(Float bottomValue) {
             this.bottomValue = bottomValue;
@@ -528,7 +527,7 @@ public class AbsoluteLayout extends AbstractLayout
          *
          * @param leftValue
          *            The value of the 'left' CSS-attribute
-         * @see #setLeftUnits(int)
+         * @see #setLeftUnits(Unit)
          */
         public void setLeftValue(Float leftValue) {
             this.leftValue = leftValue;
@@ -646,11 +645,9 @@ public class AbsoluteLayout extends AbstractLayout
 
     @Override
     public Registration addLayoutClickListener(LayoutClickListener listener) {
-        addListener(EventId.LAYOUT_CLICK_EVENT_IDENTIFIER,
+        return addListener(EventId.LAYOUT_CLICK_EVENT_IDENTIFIER,
                 LayoutClickEvent.class, listener,
                 LayoutClickListener.clickMethod);
-        return () -> removeListener(EventId.LAYOUT_CLICK_EVENT_IDENTIFIER,
-                LayoutClickEvent.class, listener);
     }
 
     @Override

@@ -32,14 +32,12 @@ import org.junit.Test;
 
 import com.vaadin.navigator.NavigationStateManager;
 import com.vaadin.navigator.Navigator;
-import com.vaadin.navigator.Navigator.UriFragmentManager;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
 import com.vaadin.navigator.ViewDisplay;
 import com.vaadin.navigator.ViewProvider;
 import com.vaadin.server.Page;
-import com.vaadin.server.Page.UriFragmentChangedEvent;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.shared.Registration;
 import com.vaadin.tests.server.navigator.ClassBasedViewProviderTest.TestView;
@@ -217,7 +215,7 @@ public class NavigatorTest {
             return page;
         }
 
-        private Page page;
+        private final Page page;
     }
 
     private static class TestPage extends Page {
@@ -256,7 +254,7 @@ public class NavigatorTest {
         EasyMock.reportMatcher(new IArgumentMatcher() {
             @Override
             public void appendTo(StringBuffer buffer) {
-                buffer.append("paramsIs(\"" + expected + "\")");
+                buffer.append("paramsIs(\"").append(expected).append("\")");
             }
 
             @Override
@@ -298,11 +296,9 @@ public class NavigatorTest {
                 page.removeUriFragmentCalled());
         Assert.assertNull("Navigator is not null in UI after destroy",
                 ui.getNavigator());
-        UriFragmentManager manager = (UriFragmentManager) navigator
-                .getStateManager();
 
-        manager.uriFragmentChanged(
-                EasyMock.createMock(UriFragmentChangedEvent.class));
+        page.setUriFragment("foobar", true);
+
         Assert.fail(
                 "Expected null pointer exception after call uriFragmentChanged "
                         + "for destroyed navigator");

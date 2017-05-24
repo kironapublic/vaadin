@@ -19,9 +19,10 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.EventObject;
 import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.Optional;
 
+import com.vaadin.event.SerializableEventListener;
+import com.vaadin.server.Setter;
 import com.vaadin.shared.Registration;
 import com.vaadin.ui.Component;
 import com.vaadin.util.ReflectTools;
@@ -51,6 +52,9 @@ public interface HasValue<V> extends Serializable {
         private final boolean userOriginated;
         private final Component component;
 
+        private final V oldValue;
+        private final V value;
+
         /**
          * Creates a new {@code ValueChange} event containing the current value
          * of the given value-bearing source component.
@@ -59,13 +63,15 @@ public interface HasValue<V> extends Serializable {
          *            the type of the source component
          * @param component
          *            the source component bearing the value, not null
+         * @param oldValue
+         *            the previous value held by the source of this event
          * @param userOriginated
          *            {@code true} if this event originates from the client,
          *            {@code false} otherwise.
          */
         public <COMPONENT extends Component & HasValue<V>> ValueChangeEvent(
-                COMPONENT component, boolean userOriginated) {
-            this(component, component, userOriginated);
+                COMPONENT component, V oldValue, boolean userOriginated) {
+            this(component, component, oldValue, userOriginated);
         }
 
         /**
@@ -76,31 +82,39 @@ public interface HasValue<V> extends Serializable {
          *            the component, not null
          * @param hasValue
          *            the HasValue instance bearing the value, not null
+         * @param oldValue
+         *            the previous value held by the source of this event
          * @param userOriginated
          *            {@code true} if this event originates from the client,
          *            {@code false} otherwise.
          */
 
         public ValueChangeEvent(Component component, HasValue<V> hasValue,
-                boolean userOriginated) {
+                V oldValue, boolean userOriginated) {
             super(hasValue);
             this.userOriginated = userOriginated;
             this.component = component;
+            this.oldValue = oldValue;
+            value = hasValue.getValue();
         }
 
         /**
-         * Returns the new value of the event source.
-         * <p>
-         * This a shorthand method for {@link HasValue#getValue()} for the event
-         * source {@link #getSource()}. Thus the value is always the most recent
-         * one, even if has been changed after the firing of this event.
-         *
-         * @see HasValue#getValue()
+         * Returns the value of the source before this value change event
+         * occurred.
+         * 
+         * @return the value previously held by the source of this event
+         */
+        public V getOldValue() {
+            return oldValue;
+        }
+
+        /**
+         * Returns the new value that triggered this value change event.
          *
          * @return the new value
          */
         public V getValue() {
-            return getSource().getValue();
+            return value;
         }
 
         /**
@@ -140,11 +154,12 @@ public interface HasValue<V> extends Serializable {
      * @see Registration
      */
     @FunctionalInterface
-    public interface ValueChangeListener<V>
-            extends Consumer<ValueChangeEvent<V>>, Serializable {
+    public interface ValueChangeListener<V> extends SerializableEventListener {
+
+        /** For internal use only. Might be removed in the future. */
         @Deprecated
         public static final Method VALUE_CHANGE_METHOD = ReflectTools
-                .findMethod(ValueChangeListener.class, "accept",
+                .findMethod(ValueChangeListener.class, "valueChange",
                         ValueChangeEvent.class);
 
         /**
@@ -154,8 +169,7 @@ public interface HasValue<V> extends Serializable {
          * @param event
          *            the received event, not null
          */
-        @Override
-        public void accept(ValueChangeEvent<V> event);
+        public void valueChange(ValueChangeEvent<V> event);
     }
 
     /**
@@ -200,10 +214,22 @@ public interface HasValue<V> extends Serializable {
      * values. Specific implementations might not support this.
      *
      * @return empty value
-     * @see Binder#bind(HasValue, java.util.function.Function, BiConsumer)
+     * @see Binder#bind(HasValue, ValueProvider, Setter)
      */
     public default V getEmptyValue() {
         return null;
+    }
+
+    /**
+     * Returns the current value of this object, wrapped in an {@code Optional}.
+     * <p>
+     * The {@code Optional} will be empty if the value is {@code null} or
+     * {@code isEmpty()} returns {@code true}. 
+     *
+     * @return the current value, wrapped in an {@code Optional}
+     */
+    public default Optional<V> getOptionalValue() {
+        return isEmpty() ? Optional.empty() : Optional.ofNullable(getValue());
     }
 
     /**
@@ -257,4 +283,17 @@ public interface HasValue<V> extends Serializable {
      *         not.
      */
     public boolean isReadOnly();
+
+    /**
+     * Resets the value to the empty one.
+     * <p>
+     * This is just a shorthand for resetting the value, see the methods
+     * {@link #setValue(Object)} and {@link #getEmptyValue()}.
+     *
+     * @see #setValue(Object)
+     * @see #getEmptyValue()
+     */
+    public default void clear() {
+        setValue(getEmptyValue());
+    }
 }

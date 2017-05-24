@@ -33,6 +33,12 @@ import com.vaadin.ui.RadioButtonGroup;
 
 import elemental.json.JsonObject;
 
+/**
+ * CheckBoxGroup client side connector.
+ *
+ * @author Vaadin Ltd
+ * @since 8.0
+ */
 @Connect(RadioButtonGroup.class)
 public class RadioButtonGroupConnector
         extends AbstractSingleSelectConnector<VRadioButtonGroup> {
@@ -61,6 +67,7 @@ public class RadioButtonGroupConnector
     @Override
     public void onStateChanged(StateChangeEvent stateChangeEvent) {
         super.onStateChanged(stateChangeEvent);
+        getWidget().setTabIndex(getState().tabIndex);
         getWidget().client = getConnection();
     }
 

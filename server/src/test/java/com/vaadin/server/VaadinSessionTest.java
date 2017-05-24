@@ -37,7 +37,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.server.ClientConnector.DetachEvent;
-import com.vaadin.server.ClientConnector.DetachListener;
 import com.vaadin.server.communication.UIInitHandler;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.UI;
@@ -75,12 +74,10 @@ public class VaadinSessionTest implements Serializable {
                 Object res;
                 try {
                     Thread.sleep(100); // for deadlock testing
+
+                    // simulates servlet container's session locking
                     org.junit.Assert.assertTrue("Deadlock detected",
-                            httpSessionLock.tryLock(5, TimeUnit.SECONDS)); // simulates
-                                                                           // servlet
-                                                                           // container's
-                                                                           // session
-                                                                           // locking
+                            httpSessionLock.tryLock(5, TimeUnit.SECONDS));
                     String lockAttribute = mockService.getServiceName()
                             + ".lock";
                     if (lockAttribute.equals(name)) {
@@ -146,21 +143,21 @@ public class VaadinSessionTest implements Serializable {
 
         // this simulates servlet container's session invalidation from another
         // thread
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(150); // delay selected so that VaadinSession
+                // will be already locked by the main
+                // thread
+                // when we get here
+                httpSessionLock.lock();// simulating servlet container's
+                // session lock
                 try {
-                    Thread.sleep(150); // delay selected so that VaadinSession
-                                       // will be already locked by the main
-                                       // thread
-                                       // when we get here
-                    httpSessionLock.lock();// simulating servlet container's
-                                           // session lock
                     mockService.fireSessionDestroy(session);
+                } finally {
                     httpSessionLock.unlock();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
                 }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }).start();
 
@@ -177,16 +174,13 @@ public class VaadinSessionTest implements Serializable {
             throws InterruptedException {
 
         final AtomicBoolean detachCalled = new AtomicBoolean(false);
-        ui.addDetachListener(new DetachListener() {
-            @Override
-            public void detach(DetachEvent event) {
-                detachCalled.set(true);
-                Assert.assertEquals(ui, UI.getCurrent());
-                Assert.assertEquals(ui.getPage(), Page.getCurrent());
-                Assert.assertEquals(session, VaadinSession.getCurrent());
-                Assert.assertEquals(mockService, VaadinService.getCurrent());
-                Assert.assertEquals(mockServlet, VaadinServlet.getCurrent());
-            }
+        ui.addDetachListener((DetachEvent event) -> {
+            detachCalled.set(true);
+            Assert.assertEquals(ui, UI.getCurrent());
+            Assert.assertEquals(ui.getPage(), Page.getCurrent());
+            Assert.assertEquals(session, VaadinSession.getCurrent());
+            Assert.assertEquals(mockService, VaadinService.getCurrent());
+            Assert.assertEquals(mockServlet, VaadinServlet.getCurrent());
         });
 
         session.valueUnbound(
@@ -203,16 +197,13 @@ public class VaadinSessionTest implements Serializable {
     @Test
     public void threadLocalsAfterSessionDestroy() throws InterruptedException {
         final AtomicBoolean detachCalled = new AtomicBoolean(false);
-        ui.addDetachListener(new DetachListener() {
-            @Override
-            public void detach(DetachEvent event) {
-                detachCalled.set(true);
-                Assert.assertEquals(ui, UI.getCurrent());
-                Assert.assertEquals(ui.getPage(), Page.getCurrent());
-                Assert.assertEquals(session, VaadinSession.getCurrent());
-                Assert.assertEquals(mockService, VaadinService.getCurrent());
-                Assert.assertEquals(mockServlet, VaadinServlet.getCurrent());
-            }
+        ui.addDetachListener((DetachEvent event) -> {
+            detachCalled.set(true);
+            Assert.assertEquals(ui, UI.getCurrent());
+            Assert.assertEquals(ui.getPage(), Page.getCurrent());
+            Assert.assertEquals(session, VaadinSession.getCurrent());
+            Assert.assertEquals(mockService, VaadinService.getCurrent());
+            Assert.assertEquals(mockServlet, VaadinServlet.getCurrent());
         });
         CurrentInstance.clearAll();
         session.close();

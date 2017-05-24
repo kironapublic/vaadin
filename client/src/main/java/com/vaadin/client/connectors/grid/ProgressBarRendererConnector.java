@@ -17,11 +17,12 @@ package com.vaadin.client.connectors.grid;
 
 import com.vaadin.client.renderers.ProgressBarRenderer;
 import com.vaadin.shared.ui.Connect;
+import com.vaadin.shared.ui.grid.renderers.ProgressBarRendererState;
 
 /**
  * A connector for {@link ProgressBarRenderer}.
  *
- * @since 7.4
+ * @since 8.0
  * @author Vaadin Ltd
  */
 @Connect(com.vaadin.ui.renderers.ProgressBarRenderer.class)
@@ -31,5 +32,10 @@ public class ProgressBarRendererConnector
     @Override
     public ProgressBarRenderer getRenderer() {
         return (ProgressBarRenderer) super.getRenderer();
+    }
+
+    @Override
+    public ProgressBarRendererState getState() {
+        return (ProgressBarRendererState) super.getState();
     }
 }

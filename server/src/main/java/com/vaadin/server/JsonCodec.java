@@ -204,17 +204,17 @@ public class JsonCodec implements Serializable {
      * happens to process Vaadin requests, so it must be protected from
      * corruption caused by concurrent access.
      */
-    private static ConcurrentMap<Class<?>, Collection<BeanProperty>> typePropertyCache = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class<?>, Collection<BeanProperty>> typePropertyCache = new ConcurrentHashMap<>();
 
-    private static Map<Class<?>, String> typeToTransportType = new HashMap<>();
+    private static final Map<Class<?>, String> typeToTransportType = new HashMap<>();
 
     /**
      * Note! This does not contain primitives.
      * <p>
      */
-    private static Map<String, Class<?>> transportTypeToType = new HashMap<>();
+    private static final Map<String, Class<?>> transportTypeToType = new HashMap<>();
 
-    private static Map<Class<?>, JSONSerializer<?>> customSerializers = new HashMap<>();
+    private static final Map<Class<?>, JSONSerializer<?>> customSerializers = new HashMap<>();
     static {
         customSerializers.put(Date.class, new DateSerializer());
     }
@@ -367,13 +367,9 @@ public class JsonCodec implements Serializable {
      *
      * @param targetType
      *            The type that should be returned by this method
-     * @param valueAndType
-     *            The encoded value and type array
-     * @param application
-     *            A reference to the application
-     * @param enforceGenericsInCollections
-     *            true if generics should be enforce, false to only allow
-     *            internal types in collections
+     * @param restrictToInternalTypes
+     * @param encodedJsonValue
+     * @param connectorTracker
      * @return
      */
     public static Object decodeInternalType(Type targetType,
@@ -499,8 +495,7 @@ public class JsonCodec implements Serializable {
 
         assert (keys.length() == values.length());
 
-        Map<Object, Object> map = new HashMap<>(
-                keys.length() * 2);
+        Map<Object, Object> map = new HashMap<>(keys.length() * 2);
         for (int i = 0; i < keys.length(); i++) {
             Object key = decodeInternalOrCustomType(keyType, keys.get(i),
                     connectorTracker);
@@ -551,8 +546,8 @@ public class JsonCodec implements Serializable {
      * @param typeIndex
      *            The index of a generic type to use to define the child type
      *            that should be decoded
-     * @param encodedValueAndType
-     * @param application
+     * @param connectorTracker
+     * @param value
      * @return
      */
     private static Object decodeParametrizedType(Type targetType,

@@ -13,9 +13,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-/**
- *
- */
 package com.vaadin.event.dd.acceptcriteria;
 
 import java.util.logging.Level;
@@ -36,7 +33,7 @@ import com.vaadin.ui.Component;
 @SuppressWarnings("serial")
 public class SourceIs extends ClientSideCriterion {
 
-    private Component[] components;
+    private final Component[] components;
 
     public SourceIs(Component... component) {
         components = component;
@@ -63,8 +60,8 @@ public class SourceIs extends ClientSideCriterion {
     @Override
     public boolean accept(DragAndDropEvent dragEvent) {
         if (dragEvent.getTransferable() instanceof TransferableImpl) {
-            Component sourceComponent = dragEvent
-                .getTransferable().getSourceComponent();
+            Component sourceComponent = dragEvent.getTransferable()
+                    .getSourceComponent();
             for (Component c : components) {
                 if (c == sourceComponent) {
                     return true;

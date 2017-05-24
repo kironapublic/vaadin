@@ -20,22 +20,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.vaadin.data.provider.ListDataProvider;
+import com.vaadin.data.provider.Query;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.server.data.ListDataSource;
 import com.vaadin.tests.components.AbstractTestUIWithLog;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.ListSelect;
 
-// FIXME this test should be updated once the datasource supports CRUD operations #77
+// FIXME this test should be updated once the provider supports CRUD operations #77
 public class ListSelectAddRemoveItems extends AbstractTestUIWithLog {
 
-    private ListDataSource<String> dataSource = new ListDataSource<>(
+    private ListDataProvider<String> dataProvider = new ListDataProvider<>(
             Collections.emptyList());
     private ListSelect<String> listSelect;
 
     @Override
     protected void setup(VaadinRequest request) {
-        listSelect = new ListSelect<>("ListSelect", dataSource);
+        listSelect = new ListSelect<>("ListSelect", dataProvider);
         listSelect.setWidth("100px");
         listSelect.setRows(10);
 
@@ -50,69 +51,69 @@ public class ListSelectAddRemoveItems extends AbstractTestUIWithLog {
         }));
 
         addComponent(new Button("Add first", event -> {
-            List<String> list = dataSource.fetch(null)
+            List<String> list = dataProvider.fetch(new Query<>())
                     .collect(Collectors.toList());
             list.add(0, "first");
-            dataSource = new ListDataSource<>(list);
-            listSelect.setDataSource(dataSource);
+            dataProvider = new ListDataProvider<>(list);
+            listSelect.setDataProvider(dataProvider);
             logContainer();
         }));
 
         addComponent(new Button("Add middle", event -> {
-            List<String> list = dataSource.fetch(null)
+            List<String> list = dataProvider.fetch(new Query<>())
                     .collect(Collectors.toList());
             list.add(list.size() / 2, "middle");
-            dataSource = new ListDataSource<>(list);
-            listSelect.setDataSource(dataSource);
+            dataProvider = new ListDataProvider<>(list);
+            listSelect.setDataProvider(dataProvider);
             logContainer();
         }));
 
         addComponent(new Button("Add last", event -> {
-            List<String> list = dataSource.fetch(null)
+            List<String> list = dataProvider.fetch(new Query<>())
                     .collect(Collectors.toList());
             list.add("last");
-            dataSource = new ListDataSource<>(list);
-            listSelect.setDataSource(dataSource);
+            dataProvider = new ListDataProvider<>(list);
+            listSelect.setDataProvider(dataProvider);
             logContainer();
         }));
 
         addComponent(new Button("Swap", event -> {
-            List<String> list = dataSource.fetch(null)
+            List<String> list = dataProvider.fetch(new Query<>())
                     .collect(Collectors.toList());
             Collections.swap(list, 0, list.size() - 1);
-            dataSource = new ListDataSource<>(list);
-            listSelect.setDataSource(dataSource);
+            dataProvider = new ListDataProvider<>(list);
+            listSelect.setDataProvider(dataProvider);
 
             logContainer();
         }));
 
         addComponent(new Button("Remove first", event -> {
-            List<String> list = dataSource.fetch(null)
+            List<String> list = dataProvider.fetch(new Query<>())
                     .collect(Collectors.toList());
             list.remove(0);
 
-            dataSource = new ListDataSource<>(list);
-            listSelect.setDataSource(dataSource);
+            dataProvider = new ListDataProvider<>(list);
+            listSelect.setDataProvider(dataProvider);
 
             logContainer();
         }));
 
         addComponent(new Button("Remove middle", event -> {
-            List<String> list = dataSource.fetch(null)
+            List<String> list = dataProvider.fetch(new Query<>())
                     .collect(Collectors.toList());
             list.remove(list.size() / 2);
-            dataSource = new ListDataSource<>(list);
-            listSelect.setDataSource(dataSource);
+            dataProvider = new ListDataProvider<>(list);
+            listSelect.setDataProvider(dataProvider);
             logContainer();
         }));
 
         addComponent(new Button("Remove last", event -> {
-            List<String> list = dataSource.fetch(null)
+            List<String> list = dataProvider.fetch(new Query<>())
                     .collect(Collectors.toList());
             list.remove(list.size() - 1);
 
-            dataSource = new ListDataSource<>(list);
-            listSelect.setDataSource(dataSource);
+            dataProvider = new ListDataProvider<>(list);
+            listSelect.setDataProvider(dataProvider);
 
             logContainer();
         }));
@@ -121,7 +122,8 @@ public class ListSelectAddRemoveItems extends AbstractTestUIWithLog {
 
     private void logContainer() {
         StringBuilder b = new StringBuilder();
-        List<String> list = dataSource.fetch(null).collect(Collectors.toList());
+        List<String> list = dataProvider.fetch(new Query<>())
+                .collect(Collectors.toList());
         for (int i = 0; i < list.size(); i++) {
             Object id = list.get(i);
             if (i != 0) {
@@ -134,8 +136,8 @@ public class ListSelectAddRemoveItems extends AbstractTestUIWithLog {
     }
 
     public void resetContainer() {
-        dataSource = new ListDataSource<>(Arrays.asList("a", "b", "c"));
-        listSelect.setDataSource(dataSource);
+        dataProvider = new ListDataProvider<>(Arrays.asList("a", "b", "c"));
+        listSelect.setDataProvider(dataProvider);
     }
 
     @Override

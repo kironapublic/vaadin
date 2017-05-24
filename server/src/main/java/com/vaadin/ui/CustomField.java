@@ -16,10 +16,11 @@
 
 package com.vaadin.ui;
 
-import java.io.Serializable;
+import java.util.Collections;
 import java.util.Iterator;
 
 import com.vaadin.data.HasValue;
+import com.vaadin.shared.ui.customfield.CustomFieldState;
 
 /**
  * A {@link HasValue} whose UI content can be constructed by the user, enabling
@@ -27,7 +28,7 @@ import com.vaadin.data.HasValue;
  * Customization of both the visual presentation and the logic of the field is
  * possible.
  * <p>
- * Subclasses must implement {@link #getType()} and {@link #initContent()}.
+ * Subclasses must implement {@link #initContent()}.
  * <p>
  * Most custom fields can simply compose a user interface that calls the methods
  * {@link #doSetValue(Object)} and {@link #getValue()} when necessary.
@@ -117,31 +118,77 @@ public abstract class CustomField<T> extends AbstractField<T>
         markAsDirtyRecursive();
     }
 
+    @Override
+    protected CustomFieldState getState() {
+        return (CustomFieldState) super.getState();
+    }
+
+    @Override
+    protected CustomFieldState getState(boolean markAsDirty) {
+        return (CustomFieldState) super.getState(markAsDirty);
+    }
+
     // ComponentContainer methods
 
-    private class ComponentIterator
-            implements Iterator<Component>, Serializable {
-        boolean first = (root != null);
-
-        @Override
-        public boolean hasNext() {
-            return first;
+    @Override
+    public Iterator<Component> iterator() {
+        // Can't use getContent() here as this will cause an infinite loop if
+        // initContent happens to all iterator(). This happens if you do
+        // setWidth...
+        if (root != null) {
+            return Collections.singletonList(root).iterator();
+        } else {
+            return Collections.<Component> emptyList().iterator();
         }
+    }
 
-        @Override
-        public Component next() {
-            first = false;
-            return getContent();
-        }
+    /**
+     * Sets the component to which all methods from the {@link Focusable}
+     * interface should be delegated.
+     * <p>
+     * Set this to a wrapped field to include that field in the tabbing order,
+     * to make it receive focus when {@link #focus()} is called and to make it
+     * be correctly focused when used as a Grid editor component.
+     * <p>
+     * By default, {@link Focusable} events are handled by the super class and
+     * ultimately ignored.
+     *
+     * @param focusDelegate
+     *            the focusable component to which focus events are redirected
+     */
+    public void setFocusDelegate(Focusable focusDelegate) {
+        getState().focusDelegate = focusDelegate;
+    }
 
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
+    private Focusable getFocusable() {
+        return (Focusable) getState(false).focusDelegate;
+    }
+
+    @Override
+    public void focus() {
+        if (getFocusable() != null) {
+            getFocusable().focus();
+        } else {
+            super.focus();
         }
     }
 
     @Override
-    public Iterator<Component> iterator() {
-        return new ComponentIterator();
+    public int getTabIndex() {
+        if (getFocusable() != null) {
+            return getFocusable().getTabIndex();
+        } else {
+            return super.getTabIndex();
+        }
     }
+
+    @Override
+    public void setTabIndex(int tabIndex) {
+        if (getFocusable() != null) {
+            getFocusable().setTabIndex(tabIndex);
+        } else {
+            super.setTabIndex(tabIndex);
+        }
+    }
+
 }

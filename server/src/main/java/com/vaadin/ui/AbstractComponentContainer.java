@@ -23,6 +23,7 @@ import java.util.LinkedList;
 
 import com.vaadin.server.ComponentSizeValidator;
 import com.vaadin.shared.Registration;
+import com.vaadin.shared.ui.AbstractComponentContainerState;
 
 /**
  * Extension to {@link AbstractComponent} that defines the default
@@ -72,8 +73,8 @@ public abstract class AbstractComponentContainer extends AbstractComponent
         }
 
         // Removes all component
-        for (final Iterator<Component> i = l.iterator(); i.hasNext();) {
-            removeComponent(i.next());
+        for (Component aL : l) {
+            removeComponent(aL);
         }
     }
 
@@ -90,9 +91,7 @@ public abstract class AbstractComponentContainer extends AbstractComponent
             components.add(i.next());
         }
 
-        for (final Iterator<Component> i = components.iterator(); i
-                .hasNext();) {
-            final Component c = i.next();
+        for (final Component c : components) {
             source.removeComponent(c);
             addComponent(c);
         }
@@ -102,9 +101,7 @@ public abstract class AbstractComponentContainer extends AbstractComponent
     @Override
     public Registration addComponentAttachListener(
             ComponentAttachListener listener) {
-        addListener(ComponentAttachEvent.class, listener,
-                ComponentAttachListener.attachMethod);
-        return () -> removeListener(ComponentAttachEvent.class, listener,
+        return addListener(ComponentAttachEvent.class, listener,
                 ComponentAttachListener.attachMethod);
     }
 
@@ -121,9 +118,7 @@ public abstract class AbstractComponentContainer extends AbstractComponent
     @Override
     public Registration addComponentDetachListener(
             ComponentDetachListener listener) {
-        addListener(ComponentDetachEvent.class, listener,
-                ComponentDetachListener.detachMethod);
-        return () -> removeListener(ComponentDetachEvent.class, listener,
+        return addListener(ComponentDetachEvent.class, listener,
                 ComponentDetachListener.detachMethod);
     }
 
@@ -322,5 +317,15 @@ public abstract class AbstractComponentContainer extends AbstractComponent
     @Override
     public Iterator<Component> getComponentIterator() {
         return iterator();
+    }
+
+    @Override
+    protected AbstractComponentContainerState getState() {
+        return (AbstractComponentContainerState) super.getState();
+    }
+
+    @Override
+    protected AbstractComponentContainerState getState(boolean markAsDirty) {
+        return (AbstractComponentContainerState) super.getState(markAsDirty);
     }
 }

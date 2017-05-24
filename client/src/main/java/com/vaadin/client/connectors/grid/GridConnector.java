@@ -18,12 +18,14 @@ package com.vaadin.client.connectors.grid;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.dom.client.NativeEvent;
@@ -40,7 +42,6 @@ import com.vaadin.client.annotations.OnStateChange;
 import com.vaadin.client.connectors.AbstractListingConnector;
 import com.vaadin.client.connectors.grid.ColumnConnector.CustomColumn;
 import com.vaadin.client.data.DataSource;
-import com.vaadin.client.data.SelectionModel;
 import com.vaadin.client.ui.SimpleManagedLayout;
 import com.vaadin.client.widget.grid.CellReference;
 import com.vaadin.client.widget.grid.EventCellReference;
@@ -48,24 +49,21 @@ import com.vaadin.client.widget.grid.events.BodyClickHandler;
 import com.vaadin.client.widget.grid.events.BodyDoubleClickHandler;
 import com.vaadin.client.widget.grid.events.GridClickEvent;
 import com.vaadin.client.widget.grid.events.GridDoubleClickEvent;
-import com.vaadin.client.widget.grid.selection.ClickSelectHandler;
-import com.vaadin.client.widget.grid.selection.SpaceSelectHandler;
 import com.vaadin.client.widget.grid.sort.SortEvent;
 import com.vaadin.client.widget.grid.sort.SortOrder;
 import com.vaadin.client.widgets.Grid;
 import com.vaadin.client.widgets.Grid.Column;
 import com.vaadin.client.widgets.Grid.FooterRow;
-import com.vaadin.client.widgets.Grid.HeaderCell;
 import com.vaadin.client.widgets.Grid.HeaderRow;
 import com.vaadin.shared.MouseEventDetails;
-import com.vaadin.shared.data.DataCommunicatorConstants;
-import com.vaadin.shared.data.selection.SelectionServerRpc;
 import com.vaadin.shared.data.sort.SortDirection;
 import com.vaadin.shared.ui.Connect;
+import com.vaadin.shared.ui.grid.GridClientRpc;
 import com.vaadin.shared.ui.grid.GridConstants;
 import com.vaadin.shared.ui.grid.GridConstants.Section;
 import com.vaadin.shared.ui.grid.GridServerRpc;
 import com.vaadin.shared.ui.grid.GridState;
+import com.vaadin.shared.ui.grid.ScrollDestination;
 import com.vaadin.shared.ui.grid.SectionState;
 import com.vaadin.shared.ui.grid.SectionState.CellState;
 import com.vaadin.shared.ui.grid.SectionState.RowState;
@@ -81,6 +79,8 @@ import elemental.json.JsonObject;
 @Connect(com.vaadin.ui.Grid.class)
 public class GridConnector extends AbstractListingConnector
         implements HasComponentsConnector, SimpleManagedLayout, DeferredWorker {
+
+    private Set<Runnable> refreshDetailsCallbacks = new HashSet<>();
 
     private class ItemClickHandler
             implements BodyClickHandler, BodyDoubleClickHandler {
@@ -115,8 +115,6 @@ public class GridConnector extends AbstractListingConnector
 
     /* Child component list for HasComponentsConnector */
     private List<ComponentConnector> childComponents;
-    private SpaceSelectHandler<JsonObject> spaceSelectHandler;
-    private ClickSelectHandler<JsonObject> clickSelectHandler;
     private ItemClickHandler itemClickHandler = new ItemClickHandler();
 
     /**
@@ -147,13 +145,96 @@ public class GridConnector extends AbstractListingConnector
         return (Grid<JsonObject>) super.getWidget();
     }
 
+    /**
+     * Method called for a row details refresh. Runs all callbacks if any
+     * details were shown and clears the callbacks.
+     *
+     * @param detailsShown
+     *            True if any details were set visible
+     */
+    protected void detailsRefreshed(boolean detailsShown) {
+        if (detailsShown) {
+            refreshDetailsCallbacks.forEach(Runnable::run);
+        }
+        refreshDetailsCallbacks.clear();
+    }
+
+    /**
+     * Method target for when one single details has been updated and we might
+     * need to scroll it into view.
+     *
+     * @param rowIndex
+     *            index of updated row
+     */
+    protected void singleDetailsOpened(int rowIndex) {
+        addDetailsRefreshCallback(() -> {
+            if (rowHasDetails(rowIndex)) {
+                getWidget().scrollToRow(rowIndex);
+            }
+        });
+    }
+
+    /**
+     * Add a single use details runnable callback for when we get a call to
+     * {@link #detailsRefreshed(boolean)}.
+     *
+     * @param refreshCallback
+     *            Details refreshed callback
+     */
+    private void addDetailsRefreshCallback(Runnable refreshCallback) {
+        refreshDetailsCallbacks.add(refreshCallback);
+    }
+
+    /**
+     * Check if we have details for given row.
+     *
+     * @param rowIndex
+     * @return
+     */
+    private boolean rowHasDetails(int rowIndex) {
+        JsonObject row = getWidget().getDataSource().getRow(rowIndex);
+
+        return row != null && row.hasKey(GridState.JSONKEY_DETAILS_VISIBLE)
+                && !row.getString(GridState.JSONKEY_DETAILS_VISIBLE).isEmpty();
+    }
+
     @Override
     protected void init() {
         super.init();
 
-        // Default selection style is space key.
-        spaceSelectHandler = new SpaceSelectHandler<>(getWidget());
-        clickSelectHandler = new ClickSelectHandler<>(getWidget());
+        registerRpc(GridClientRpc.class, new GridClientRpc() {
+
+            @Override
+            public void scrollToRow(int row, ScrollDestination destination) {
+                Scheduler.get().scheduleFinally(
+                        () -> getWidget().scrollToRow(row, destination));
+                // Add details refresh listener and handle possible detail for
+                // scrolled row.
+                addDetailsRefreshCallback(() -> {
+                    if (rowHasDetails(row)) {
+                        getWidget().scrollToRow(row, destination);
+                    }
+                });
+            }
+
+            @Override
+            public void scrollToStart() {
+                Scheduler.get()
+                        .scheduleFinally(() -> getWidget().scrollToStart());
+            }
+
+            @Override
+            public void scrollToEnd() {
+                Scheduler.get()
+                        .scheduleFinally(() -> getWidget().scrollToEnd());
+                addDetailsRefreshCallback(() -> {
+                    if (rowHasDetails(getWidget().getDataSource().size() - 1)) {
+                        getWidget().scrollToEnd();
+                    }
+                });
+            }
+        });
+
         getWidget().addSortHandler(this::handleSortEvent);
         getWidget().setRowStyleGenerator(rowRef -> {
             JsonObject json = rowRef.getRow();
@@ -204,33 +285,6 @@ public class GridConnector extends AbstractListingConnector
         /* Item click events */
         getWidget().addBodyClickHandler(itemClickHandler);
         getWidget().addBodyDoubleClickHandler(itemClickHandler);
-        getWidget().setSelectionModel(new SelectionModel<JsonObject>() {
-
-            @Override
-            public void select(JsonObject item) {
-                getRpcProxy(SelectionServerRpc.class)
-                        .select(item.getString(DataCommunicatorConstants.KEY));
-            }
-
-            @Override
-            public void deselect(JsonObject item) {
-                getRpcProxy(SelectionServerRpc.class).deselect(
-                        item.getString(DataCommunicatorConstants.KEY));
-            }
-
-            @Override
-            public Set<JsonObject> getSelectedItems() {
-                throw new UnsupportedOperationException(
-                        "Selected item not known on the client side");
-            }
-
-            @Override
-            public boolean isSelected(JsonObject item) {
-                return item.hasKey(DataCommunicatorConstants.SELECTED)
-                        && item.getBoolean(DataCommunicatorConstants.SELECTED);
-            }
-
-        });
 
         layout();
     }
@@ -238,8 +292,15 @@ public class GridConnector extends AbstractListingConnector
     @SuppressWarnings("unchecked")
     @OnStateChange("columnOrder")
     void updateColumnOrder() {
-        getWidget().setColumnOrder(getState().columnOrder.stream()
-                .map(this::getColumn).toArray(size -> new Column[size]));
+        Scheduler.get()
+                .scheduleFinally(() -> getWidget().setColumnOrder(
+                        getState().columnOrder.stream().map(this::getColumn)
+                                .toArray(size -> new Column[size])));
+    }
+
+    @OnStateChange("columnResizeMode")
+    void updateColumnResizeMode() {
+        getWidget().setColumnResizeMode(getState().columnResizeMode);
     }
 
     /**
@@ -247,28 +308,46 @@ public class GridConnector extends AbstractListingConnector
      */
     @OnStateChange("header")
     void updateHeader() {
-        final Grid<JsonObject> grid = getWidget();
-        final SectionState state = getState().header;
+        Scheduler.get().scheduleFinally(() -> {
+            final Grid<JsonObject> grid = getWidget();
+            final SectionState state = getState().header;
 
-        while (grid.getHeaderRowCount() > 0) {
-            grid.removeHeaderRow(0);
-        }
-
-        for (RowState rowState : state.rows) {
-            HeaderRow row = grid.appendHeaderRow();
-
-            if (rowState.defaultHeader) {
-                grid.setDefaultHeaderRow(row);
+            while (grid.getHeaderRowCount() > 0) {
+                grid.removeHeaderRow(0);
             }
 
-            rowState.cells.forEach((columnId, cellState) -> {
-                updateHeaderCellFromState(row.getCell(getColumn(columnId)),
-                        cellState);
-            });
-        }
+            for (RowState rowState : state.rows) {
+                HeaderRow row = grid.appendHeaderRow();
+
+                if (rowState.defaultHeader) {
+                    grid.setDefaultHeaderRow(row);
+                }
+
+                updateStaticRow(rowState, row);
+            }
+        });
     }
 
-    private void updateHeaderCellFromState(HeaderCell cell,
+    private void updateStaticRow(RowState rowState,
+            Grid.StaticSection.StaticRow row) {
+        rowState.cells.forEach((columnId, cellState) -> {
+            updateStaticCellFromState(row.getCell(getColumn(columnId)),
+                    cellState);
+        });
+        for (Map.Entry<CellState, Set<String>> cellGroupEntry : rowState.cellGroups
+                .entrySet()) {
+            Set<String> group = cellGroupEntry.getValue();
+
+            Grid.Column<?, ?>[] columns = group.stream().map(idToColumn::get)
+                    .toArray(size -> new Grid.Column<?, ?>[size]);
+            // Set state to be the same as first in group.
+            updateStaticCellFromState(row.join(columns),
+                    cellGroupEntry.getKey());
+        }
+        row.setStyleName(rowState.styleName);
+    }
+
+    private void updateStaticCellFromState(Grid.StaticSection.StaticCell cell,
             CellState cellState) {
         switch (cellState.type) {
         case TEXT:
@@ -309,9 +388,7 @@ public class GridConnector extends AbstractListingConnector
         for (RowState rowState : state.rows) {
             FooterRow row = grid.appendFooterRow();
 
-            rowState.cells.forEach((columnId, cellState) -> {
-                row.getCell(getColumn(columnId)).setText(cellState.text);
-            });
+            updateStaticRow(rowState, row);
         }
     }
 
@@ -356,14 +433,6 @@ public class GridConnector extends AbstractListingConnector
     @Override
     public void onUnregister() {
         super.onUnregister();
-
-        columnToIdMap.clear();
-        removeClickHandler();
-
-        if (spaceSelectHandler != null) {
-            spaceSelectHandler.removeHandler();
-            spaceSelectHandler = null;
-        }
     }
 
     @Override
@@ -427,13 +496,6 @@ public class GridConnector extends AbstractListingConnector
     @Override
     public GridState getState() {
         return (GridState) super.getState();
-    }
-
-    private void removeClickHandler() {
-        if (clickSelectHandler != null) {
-            clickSelectHandler.removeHandler();
-            clickSelectHandler = null;
-        }
     }
 
     @Override

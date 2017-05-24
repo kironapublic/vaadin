@@ -90,19 +90,22 @@ public class VHtml5DragEvent extends NativeEvent {
         // Chrome >= v21 and Opera >= v?
         if (this.dataTransfer.items) {
             var item = this.dataTransfer.items[fileIndex];
-            if (item.webkitGetAsEntry) {
-                return item.webkitGetAsEntry().isFile;
+            if (typeof item.webkitGetAsEntry == "function") {
+                var entry = item.webkitGetAsEntry();
+                if (typeof entry !== "undefined" && entry !== null) {
+                    return entry.isFile;
+                }
             }
         }
-
+    
         // Zero sized files without a type are also likely to be folders
         var file = this.dataTransfer.files[fileIndex];
         if (file.size == 0 && !file.type) {
             return false;
         }
-
+    
         // TODO Make it detect folders on all browsers
-
+    
         return true;
     }-*/;
 

@@ -57,16 +57,71 @@ public class TextField extends AbstractTextField {
      * @param caption
      *            the caption <code>String</code> for the editor.
      * @param value
-     *            the initial text content of the editor.
+     *            the initial text content of the editor, not {@code null}
      */
     public TextField(String caption, String value) {
         setValue(value);
         setCaption(caption);
     }
 
+    /**
+     * Constructs a new {@code TextField} with a value change listener. The
+     * listener is called when the value of this {@code TextField} is changed
+     * either by the user or programmatically.
+     * 
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     */
+    public TextField(ValueChangeListener<String> valueChangeListener) {
+        addValueChangeListener(valueChangeListener);
+    }
+
+    /**
+     * Constructs a new {@code TextField} with the given caption and a value
+     * change listener.
+     * <p>
+     * The listener is called when the value of this {@code TextField} is
+     * changed either by the user or programmatically.
+     *
+     * @param caption
+     *            the caption {@code String} for the editor.
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     */
+    public TextField(String caption,
+            ValueChangeListener<String> valueChangeListener) {
+        this(valueChangeListener);
+        setCaption(caption);
+    }
+
+    /**
+     * Constructs a new {@code TextField} with the given caption, initial text
+     * contents and a value change listener.
+     * <p>
+     * The listener is called when the value of this {@code TextField} is
+     * changed either by the user or programmatically.
+     * 
+     * @param caption
+     *            the caption {@code String} for the editor.
+     * @param value
+     *            the initial text content of the editor, not {@code null}
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     */
+    public TextField(String caption, String value,
+            ValueChangeListener<String> valueChangeListener) {
+        this(caption, value);
+        addValueChangeListener(valueChangeListener);
+    }
+
     @Override
     protected TextFieldState getState() {
         return (TextFieldState) super.getState();
+    }
+
+    @Override
+    protected TextFieldState getState(boolean markAsDirty) {
+        return (TextFieldState) super.getState(markAsDirty);
     }
 
     @Override
@@ -83,8 +138,7 @@ public class TextField extends AbstractTextField {
     @Override
     public void writeDesign(Element design, DesignContext designContext) {
         super.writeDesign(design, designContext);
-        AbstractTextField def = (AbstractTextField) designContext
-                .getDefaultInstance(this);
+        AbstractTextField def = designContext.getDefaultInstance(this);
         Attributes attr = design.attributes();
         DesignAttributeHandler.writeAttribute("value", attr, getValue(),
                 def.getValue(), String.class, designContext);

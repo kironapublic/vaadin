@@ -25,9 +25,9 @@ import com.vaadin.client.Focusable;
 /**
  * Focusable composite whose widget is {@link ChildFocusAwareFlowPanel} (flow
  * panel that tracks focus/blur events from its children).
- * 
- * @author Vaadin Ltd
  *
+ * @author Vaadin Ltd
+ * @since 8.0
  */
 public abstract class FocusableFlowPanelComposite extends Composite
         implements HasAllFocusHandlers, Focusable {

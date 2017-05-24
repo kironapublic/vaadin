@@ -138,13 +138,7 @@ public class TabSheet extends AbstractComponentContainer
 
         // expand horizontally by default
         setWidth(100, UNITS_PERCENTAGE);
-        setCloseHandler(new CloseHandler() {
-
-            @Override
-            public void onTabClose(TabSheet tabsheet, Component c) {
-                tabsheet.removeComponent(c);
-            }
-        });
+        setCloseHandler(TabSheet::removeComponent);
     }
 
     /**
@@ -710,10 +704,7 @@ public class TabSheet extends AbstractComponentContainer
         int newLocation = -1;
         int location = 0;
 
-        for (final Iterator<Component> i = components.iterator(); i
-                .hasNext();) {
-            final Component component = i.next();
-
+        for (final Component component : components) {
             if (component == oldComponent) {
                 oldLocation = location;
             }
@@ -772,7 +763,7 @@ public class TabSheet extends AbstractComponentContainer
         try {
             SELECTED_TAB_CHANGE_METHOD = SelectedTabChangeListener.class
                     .getDeclaredMethod("selectedTabChange",
-                            new Class[] { SelectedTabChangeEvent.class });
+                            SelectedTabChangeEvent.class);
         } catch (final java.lang.NoSuchMethodException e) {
             // This should never happen
             throw new java.lang.RuntimeException(
@@ -818,6 +809,7 @@ public class TabSheet extends AbstractComponentContainer
      *
      * @since 3.0
      */
+    @FunctionalInterface
     public interface SelectedTabChangeListener extends Serializable {
 
         /**
@@ -837,12 +829,11 @@ public class TabSheet extends AbstractComponentContainer
      * @param listener
      *            the Listener to be added, not null
      * @return a registration object for removing the listener
+     * @since 8.0
      */
     public Registration addSelectedTabChangeListener(
             SelectedTabChangeListener listener) {
-        addListener(SelectedTabChangeEvent.class, listener,
-                SELECTED_TAB_CHANGE_METHOD);
-        return () -> removeListener(SelectedTabChangeEvent.class, listener,
+        return addListener(SelectedTabChangeEvent.class, listener,
                 SELECTED_TAB_CHANGE_METHOD);
     }
 
@@ -1110,7 +1101,7 @@ public class TabSheet extends AbstractComponentContainer
      */
     public class TabSheetTabImpl implements Tab {
 
-        private TabState tabState;
+        private final TabState tabState;
 
         private Focusable defaultFocus;
 
@@ -1299,6 +1290,7 @@ public class TabSheet extends AbstractComponentContainer
      * @since 6.2.0
      *
      */
+    @FunctionalInterface
     public interface CloseHandler extends Serializable {
 
         /**
@@ -1375,30 +1367,14 @@ public class TabSheet extends AbstractComponentContainer
 
     @Override
     public Registration addBlurListener(BlurListener listener) {
-        addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
+        return addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
                 BlurListener.blurMethod);
-        return () -> removeListener(BlurEvent.EVENT_ID, BlurEvent.class,
-                listener);
-    }
-
-    @Override
-    @Deprecated
-    public void removeBlurListener(BlurListener listener) {
-        removeListener(BlurEvent.EVENT_ID, BlurEvent.class, listener);
     }
 
     @Override
     public Registration addFocusListener(FocusListener listener) {
-        addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
+        return addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
                 FocusListener.focusMethod);
-        return () -> removeListener(FocusEvent.EVENT_ID, FocusEvent.class,
-                listener);
-    }
-
-    @Override
-    @Deprecated
-    public void removeFocusListener(FocusListener listener) {
-        removeListener(FocusEvent.EVENT_ID, FocusEvent.class, listener);
     }
 
     @Override
@@ -1592,7 +1568,7 @@ public class TabSheet extends AbstractComponentContainer
     @Override
     public void writeDesign(Element design, DesignContext designContext) {
         super.writeDesign(design, designContext);
-        TabSheet def = (TabSheet) designContext.getDefaultInstance(this);
+        TabSheet def = designContext.getDefaultInstance(this);
         Attributes attr = design.attributes();
 
         // write tabs

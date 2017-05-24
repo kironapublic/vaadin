@@ -16,6 +16,7 @@
 
 package com.vaadin.server;
 
+import com.vaadin.shared.extension.responsive.ResponsiveState;
 import com.vaadin.ui.Component;
 
 /**
@@ -147,8 +148,8 @@ public class Responsive extends AbstractExtension {
      * Enable responsive width and height range styling for the target component
      * or UI instance.
      *
-     * @param target
-     *            The component which should be able to respond to width and/or
+     * @param components
+     *            The components which should be able to respond to width and/or
      *            height changes.
      */
     public static void makeResponsive(Component... components) {
@@ -157,5 +158,15 @@ public class Responsive extends AbstractExtension {
                 new Responsive().extend((AbstractClientConnector) c);
             }
         }
+    }
+
+    @Override
+    protected ResponsiveState getState() {
+        return (ResponsiveState) super.getState();
+    }
+
+    @Override
+    protected ResponsiveState getState(boolean markAsDirty) {
+        return (ResponsiveState) super.getState(markAsDirty);
     }
 }

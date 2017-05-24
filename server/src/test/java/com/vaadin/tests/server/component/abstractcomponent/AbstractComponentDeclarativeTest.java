@@ -19,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import org.jsoup.nodes.Attributes;
@@ -29,12 +29,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.server.ErrorMessage.ErrorLevel;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.server.ExternalResource;
 import com.vaadin.server.FileResource;
 import com.vaadin.server.Responsive;
 import com.vaadin.server.ThemeResource;
 import com.vaadin.server.UserError;
-import com.vaadin.shared.ui.label.ContentMode;
 import com.vaadin.tests.design.DeclarativeTestBase;
 import com.vaadin.ui.AbstractComponent;
 import com.vaadin.ui.Button;
@@ -97,10 +97,10 @@ public class AbstractComponentDeclarativeTest
         Boolean[] explicitImmediate = { null, Boolean.FALSE, Boolean.TRUE,
                 Boolean.TRUE };
         boolean[] immediate = { true, false, true, true };
-        for (int i = 0; i < design.length; i++) {
+        for (String design1 : design) {
             component = (AbstractComponent) Design
                     .read(new ByteArrayInputStream(
-                            design[i].getBytes(Charset.forName("UTF-8"))));
+                            design1.getBytes(StandardCharsets.UTF_8)));
         }
     }
 

@@ -70,7 +70,7 @@ public class Notification implements Serializable {
          */
         ASSISTIVE_NOTIFICATION("assistive");
 
-        private String style;
+        private final String style;
 
         Type(String style) {
             this.style = style;
@@ -402,7 +402,7 @@ public class Notification implements Serializable {
      *
      * The caption is rendered as plain text with HTML automatically escaped.
      *
-     * @see #Notification(String, int)
+     * @see Notification(String, int)
      * @see #show(Page)
      *
      * @param caption

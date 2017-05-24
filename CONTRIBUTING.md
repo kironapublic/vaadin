@@ -1,10 +1,10 @@
 # Contributing to Vaadin Framework
 
-*There are many ways to participate to the Vaadin project. You can ask questions and participate to discussion in the [forum](https://vaadin.com/forum), [fill bug reports](https://dev.vaadin.com/) and enhancement suggestion, [create add-ons](https://vaadin.com/directory) and contribute code. These instructions are for contributing code the the core framework.*
+*There are many ways to participate to the Vaadin project. You can ask questions and participate to discussion in the [forum](https://vaadin.com/forum), [fill bug reports](https://github.com/vaadin/framework/issues) and enhancement suggestion, [create add-ons](https://vaadin.com/directory) and contribute code. These instructions are for contributing code the the core framework.*
 
 # Summary
 
-We like quality patches that solve problems. A quality patch follows good coding practices - it’s easy to read and understand. For more complicated fixes or features, the change should be broken down into several smaller easy to understand patches. Most of this is really just what we consider to be common sense and best development practices.  
+We like quality patches that solve problems. A quality patch follows good coding practices - it’s easy to read and understand. For more complicated fixes or features, the change should be broken down into several smaller easy to understand patches. Most of this is really just what we consider to be common sense and best development practices.
 
 In other words: 
 
@@ -13,10 +13,10 @@ In other words:
  * Include a test to prove your patch works, or a benchmark if it’s a performance improvement.
  * Style-check your changes: it’s okay to have a separate commit to fix style issues.
  * Ensure you have Contributor Agreement signed up. This can be signed digitally in the code review system.
- * Submit your patch; it will then be reviewed by the Framework team, who will provide actionable feedback in a timely fashion if necessary. 
+ * Create a pull request; it will then be reviewed by the Framework team, who will provide actionable feedback in a timely fashion if necessary. **Remember to check the "Allow edits from maintainers" so we can rebase the PR or make small changes if necessary** 
  * Respond to review comments: review comments are meant to improve the quality of the code by pointing out defects or readability issues.
- * Don't get discouraged - or impatient: Reviewers are people too and will sometimes forget. Give them a friendly poke if you feel the patch has been forgotten about. 
- * Most patches take a few iterations of review before they are merged. 
+ * Don't get discouraged - or impatient: Reviewers are people too and will sometimes forget. Give them a friendly poke if you feel the PR has been forgotten about. 
+ * Most PRs take a few iterations of review before they are merged. 
 
 # We encourage you to get in touch
 
@@ -26,13 +26,15 @@ Getting in touch with us early will also help us co-ordinate efforts so that not
 
 # Obtain a current source tree
 
-The Vaadin repository can be cloned using `git clone https://github.com/vaadin/vaadin.git` or using your favorite Git tool.
+The Vaadin repository can be cloned using `git clone https://github.com/vaadin/framework.git` or using your favorite Git tool.
 
 Remember to do `git checkout master` and `git pull` to make sure you are creating your commits on top of a recent enough version. 
 
+https://robots.thoughtbot.com/keeping-a-github-fork-updated has instructions on how to keep your local fork up to date.
+
 ## Set up your development environment
 
-To set up the project to your IDE, follow the instructions in the [README.md](https://github.com/vaadin/vaadin).
+To set up the project to your IDE, follow the instructions in the [README.md](https://github.com/vaadin/framework).
 
 # Describe your changes
 
@@ -72,7 +74,7 @@ When dividing your change into a series of patches, take special care to ensure 
 
 # Style-check your changes
 
-Check your patch for basic style violations. If you use eclipse, use the formatting rules preconfigured in the project to make life easier for all involved, and configure save actions as described in [README.md](https://github.com/vaadin/vaadin/blob/master/README.md). 
+Check your patch for basic style violations. If you use eclipse, use the formatting rules preconfigured in the project to make life easier for all involved, and configure save actions as described in [README.md](https://github.com/vaadin/framework/blob/master/README.md). 
 
 Patches causing unnecessary style/whitespace changes are messy and will likely be bounced back. 
 
@@ -118,7 +120,7 @@ If you can clearly prove that the patch works, it dramatically increases the odd
 
 # Respond to review comments
 
-Your patch will almost certainly get comments from reviewers on ways in which the patch can be improved.  You must respond to those comments; ignoring reviewers is a good way to get ignored in return.  Review comments or questions that do not lead to a code change should almost certainly bring about a comment or changelog entry so that the next reviewer better understands what is going on.
+Your pull request will almost certainly get comments from reviewers on ways in which the patch can be improved.  You must respond to those comments; ignoring reviewers is a good way to get ignored in return.  Review comments or questions that do not lead to a code change should almost certainly bring about a comment or changelog entry so that the next reviewer better understands what is going on.
 
 Be sure to tell the reviewers what changes you are making. Respond politely to comments and address the problems they have pointed out. 
 
@@ -132,78 +134,10 @@ You should receive comments within a week or so; if that does not happen, make s
 
 # Submitting the patches
 
-## Submitting patches to gerrit
+## Creating a pull request in GitHub
 
-### Register
-
-Vaadin Gerrit requires you to register separately even though you already have a vaadin.com or dev.vaadin.com account. Go to http://dev.vaadin.com/review and click “register” in the top right corner. The code review uses OpenID and the simplest way to register is using a Google account. Click “Sign in with a Google Account” and enter your Google account details. 
-
-You need to select a username for your account. This is used for submitting contributions for review so remember it. 
-
-### Submit an SSH key
-
-You also need to add the public part of an SSH key, which is used to authenticate you when you are submitting patches. 
-
-Before any of your patches can be accepted you need to complete a contribution agreement. You can do that while registering your username by clicking on the "New Contributor Agreement" and following the instructions. You can do this later also, but you won't be able to submit anything before the agreement is completed. 
-
-Once you are done, you can verify everything is setup correctly using ssh:
-
-    ssh -p 29418 <username>@dev.vaadin.com
-
-If you cannot connect, recheck your user name and ssh key.
-
-### Prepare commit hook for Change-Id
-
-Gerrit tracks changes based on a “Change-Id:” field which must be present in the commit message. To automatically generate a change id you must either copy a Git hook made for this purpose by running this command:
-
-    scp -p -P 29418 <username>@dev.vaadin.com:hooks/commit-msg .git/hooks/
-
-or, if you are using EGit, remember to click the Add Change-Id button in the commit dialog before committing.
-
-### Add "gerrit" remote
-
-You also need to add Gerrit as a remote in your git to be able to later push changes for review:
-
-    git remote add gerrit ssh://<username>@dev.vaadin.com:29418/vaadin.git
-
-In EGit this is configured when you push the first change for review
-
-### Pushing changes
-
-All contributions should be made to the master branch. The contribution might be included in the current maintenance branch depending on the nature of the patch.
-
-The recommended workflow is to checkout master and then create a separate branch for the ticket based on that
-
-    git checkout master ; git checkout -b richtext-race-condition
-
-Then do the actual work as described above and pay attention to a decent commit message.
-
-Gerrit uses a special target “refs/for/<branch>” to which changes should be pushed. Since everything should be pushed through master you should always use refs/for/master.
-
-To push the change for review, use the following command:
-
-    git push gerrit HEAD:refs/for/master
-
-To give a "topic" to your change, you can use the format
-
-    git push gerrit HEAD:refs/for/master/myfancytopic
-
-or in EGit: Team -> Remote -> Push To Gerrit... and Update the URI if incorrect to be ssh://<username>@dev.vaadin.com:29418/vaadin.git . The branch should be refs/for/master
-
-Pushing the commit should result in a message containing a link to the review change:
-
-    [...]
-    New Changes:
-      https://dev.vaadin.com/review/1381
-
-Open the change in Gerrit and review it to see that you did not accidentally push something else than you thought. If you want to modify the changes, you made, just do [an "amend" commit](https://www.atlassian.com/git/tutorials/rewriting-history/git-commit--amend/) and push the changes again to Gerrit.
-
-A message about the change is automatically sent to reviewers so there is no need to manually add reviewers in Gerrit.
-
-## Submitting patches to github
-
-For some projects which are only available on Github ([Vaadin Plug-in for Eclipse](http://github.com/vaadin/eclipse-plugin), [Vaadin ContextMenu](https://github.com/vaadin/context-menu)), we prefer Pull Requests. For GitHub projects it would make sense to fork the project to create your pull request based on your fork. 
+All our projects accept contributions as GitHub pull requests. The first time you create a pull request, you will be asked to electronically sign a contribution agreement.
 
 https://yangsu.github.io/pull-request-tutorial/ has instructions on how to create a pull request.
 
-Contributing to these projects also needs a valid Contributor Agrement. See above Gerrit instructions how to digitally sign the agrement.
+**Remember to check the "Allow edits from maintainers" so we can rebase the PR or make small changes if necessary**.

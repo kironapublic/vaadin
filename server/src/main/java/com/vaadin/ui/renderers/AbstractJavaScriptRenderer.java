@@ -70,7 +70,7 @@ import elemental.json.JsonValue;
  * <li><code>init(cell)</code> - Prepares a cell for rendering. Corresponds to
  * {@link com.vaadin.client.renderers.ComplexRenderer#init(com.vaadin.client.widget.grid.RendererCellReference)}
  * .</li>
- * <li><code>destory(cell)</code> - Allows the renderer to release resources
+ * <li><code>destroy(cell)</code> - Allows the renderer to release resources
  * allocate for a cell that will no longer be used. Corresponds to
  * {@link com.vaadin.client.renderers.ComplexRenderer#destroy(com.vaadin.client.widget.grid.RendererCellReference)}
  * .</li>
@@ -104,7 +104,7 @@ import elemental.json.JsonValue;
  * supported in the object passed to the <code>render</code> function - other
  * functions should not use the property. Readable and writable.
  * </ul>
- * 
+ *
  * @param <T>
  *            the grid type this renderer can be attached to
  * @param <V>
@@ -175,5 +175,10 @@ public abstract class AbstractJavaScriptRenderer<T, V>
     @Override
     protected JavaScriptExtensionState getState() {
         return (JavaScriptExtensionState) super.getState();
+    }
+
+    @Override
+    protected JavaScriptExtensionState getState(boolean markAsDirty) {
+        return (JavaScriptExtensionState) super.getState(markAsDirty);
     }
 }

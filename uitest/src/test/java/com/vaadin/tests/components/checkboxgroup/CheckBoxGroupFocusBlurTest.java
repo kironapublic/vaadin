@@ -23,8 +23,9 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.remote.DesiredCapabilities;
 
-import com.vaadin.testbench.customelements.CheckBoxGroupElement;
+import com.vaadin.testbench.elements.CheckBoxGroupElement;
 import com.vaadin.testbench.elements.LabelElement;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
@@ -40,21 +41,23 @@ public class CheckBoxGroupFocusBlurTest extends MultiBrowserTest {
 
         List<WebElement> checkBoxes = $(CheckBoxGroupElement.class).first()
                 .findElements(By.tagName("input"));
-        checkBoxes.get(0).click();
+        $(CheckBoxGroupElement.class).first().selectByText("1");
 
         // Focus event is fired
         Assert.assertTrue(logContainsText("1. Focus Event"));
 
-        checkBoxes.get(1).click();
+        $(CheckBoxGroupElement.class).first().selectByText("2");
         // click on the second checkbox doesn't fire anything
         Assert.assertFalse(logContainsText("2."));
 
-        // click in the middle between the first and the second (inside group).
-        WebElement first = checkBoxes.get(0);
-        int middle = (first.getLocation().y + first.getSize().height
-                + checkBoxes.get(1).getLocation().y) / 2;
-        new Actions(getDriver()).moveByOffset(first.getLocation().x, middle)
+        // move the cursor to the middle of the first element,
+        // offset to the middle of the two and perform click
+        new Actions(getDriver()).moveToElement(checkBoxes.get(0))
+                .moveByOffset(0,
+                        (checkBoxes.get(1).getLocation().y
+                                - checkBoxes.get(0).getLocation().y) / 2)
                 .click().build().perform();
+
         // no new events
         Assert.assertFalse(logContainsText("2."));
 
@@ -69,7 +72,7 @@ public class CheckBoxGroupFocusBlurTest extends MultiBrowserTest {
         // blur event is fired
         Assert.assertTrue(logContainsText("2. Blur Event"));
 
-        checkBoxes.get(3).click();
+        $(CheckBoxGroupElement.class).first().selectByText("4");
         // Focus event is fired
         Assert.assertTrue(logContainsText("3. Focus Event"));
 
@@ -82,5 +85,11 @@ public class CheckBoxGroupFocusBlurTest extends MultiBrowserTest {
         checkBoxes.get(4).sendKeys(Keys.SPACE);
         // no new events
         Assert.assertFalse(logContainsText("4."));
+    }
+
+    @Override
+    public List<DesiredCapabilities> getBrowsersToTest() {
+        // Focus does not move when expected with Selenium/TB and Firefox 45
+        return getBrowsersExcludingFirefox();
     }
 }

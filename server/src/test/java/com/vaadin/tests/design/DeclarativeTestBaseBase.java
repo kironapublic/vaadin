@@ -102,11 +102,11 @@ public abstract class DeclarativeTestBaseBase<T extends Component> {
 
     protected void assertEquals(String message, Object o1, Object o2) {
         if (o1 == null) {
-            Assert.assertEquals(message, null, o2);
+            Assert.assertNull(message, o2);
             return;
         }
         if (o2 == null) {
-            Assert.assertEquals(message, null, o1);
+            Assert.assertNull(message, o1);
             return;
         }
 
@@ -213,17 +213,26 @@ public abstract class DeclarativeTestBaseBase<T extends Component> {
         return read;
     }
 
-    public void testWrite(String design, T expected) {
+    public DesignContext readComponentAndCompare(String design, T expected) {
         TestLogHandler l = new TestLogHandler();
-        testWrite(design, expected, false);
+        DesignContext context = readAndReturnContext(design);
+        assertEquals(expected, context.getRootComponent());
+        Assert.assertEquals("", l.getMessages());
+        return context;
+    }
+
+    public void testWrite(String expected, T component) {
+        TestLogHandler l = new TestLogHandler();
+        testWrite(expected, component, false);
         Assert.assertEquals("", l.getMessages());
     }
 
-    public void testWrite(String design, T expected, boolean writeData) {
-        String written = write(expected, writeData);
+    public void testWrite(String expectedDesign, T component,
+            boolean writeData) {
+        String written = write(component, writeData);
 
         Element producedElem = Jsoup.parse(written).body().child(0);
-        Element comparableElem = Jsoup.parse(design).body().child(0);
+        Element comparableElem = Jsoup.parse(expectedDesign).body().child(0);
 
         String produced = elementToHtml(producedElem);
         String comparable = elementToHtml(comparableElem);
@@ -268,7 +277,7 @@ public abstract class DeclarativeTestBaseBase<T extends Component> {
         }
         Collections.sort(names);
 
-        sb.append("<" + producedElem.tagName() + "");
+        sb.append("<").append(producedElem.tagName()).append("");
         for (String attrName : names) {
             sb.append(" ").append(attrName);
             if (!booleanAttributes.contains(attrName)) {

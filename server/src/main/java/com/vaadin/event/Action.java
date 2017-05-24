@@ -90,6 +90,7 @@ public class Action implements Serializable {
      * Action.Handler interface.<br/>
      *
      */
+    @FunctionalInterface
     public interface Listener extends Serializable {
         public void handleAction(Object sender, Object target);
     }
@@ -107,6 +108,15 @@ public class Action implements Serializable {
     }
 
     public interface ShortcutNotifier extends Serializable {
+        /**
+         * Add a shortcut listener and return a registration object for
+         * unregistering it.
+         *
+         * @param shortcut
+         *            listener to add
+         * @return registration for unregistering the listener
+         * @since 8.0
+         */
         public Registration addShortcutListener(ShortcutListener shortcut);
 
         /**

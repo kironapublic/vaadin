@@ -36,6 +36,7 @@ import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
 import com.vaadin.annotations.DesignRoot;
+import com.vaadin.server.VaadinServiceClassLoaderUtil;
 import com.vaadin.shared.util.SharedUtil;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.declarative.DesignContext.ComponentCreatedEvent;
@@ -192,7 +193,9 @@ public class Design implements Serializable {
         protected Class<? extends Component> resolveComponentClass(
                 String qualifiedClassName, DesignContext context) {
             try {
-                Class<?> componentClass = Class.forName(qualifiedClassName);
+                Class<?> componentClass = Class.forName(qualifiedClassName,
+                        true,
+                        VaadinServiceClassLoaderUtil.findDefaultClassLoader());
                 return componentClass.asSubclass(Component.class);
             } catch (ClassNotFoundException e) {
                 throw new DesignException("Unable to load component for design",
@@ -454,7 +457,7 @@ public class Design implements Serializable {
                     "The first level of a component hierarchy should contain at most one root component, but found "
                             + children.size() + ".");
         }
-        Element element = children.size() == 0 ? null : children.first();
+        Element element = children.isEmpty() ? null : children.first();
         if (componentRoot != null) {
             if (element == null) {
                 throw new DesignException(
@@ -472,11 +475,9 @@ public class Design implements Serializable {
             }
             // create listener for component creations that binds the created
             // components to the componentRoot instance fields
-            ComponentCreationListener creationListener = new ComponentCreationListener() {
-                @Override
-                public void componentCreated(ComponentCreatedEvent event) {
-                    binder.bindField(event.getComponent(), event.getLocalId());
-                }
+            ComponentCreationListener creationListener = (
+                    ComponentCreatedEvent event) -> {
+                binder.bindField(event.getComponent(), event.getLocalId());
             };
             designContext.addComponentCreationListener(creationListener);
             // create subtree
@@ -571,7 +572,7 @@ public class Design implements Serializable {
         DesignRoot designAnnotation = annotatedClass
                 .getAnnotation(DesignRoot.class);
         String filename = designAnnotation.value();
-        if (filename.equals("")) {
+        if (filename.isEmpty()) {
             // No value, assume the html file is named as the class
             filename = annotatedClass.getSimpleName() + ".html";
         }

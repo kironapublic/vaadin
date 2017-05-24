@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2000-2016 Vaadin Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -32,7 +32,7 @@ import com.vaadin.client.communication.StateChangeEvent;
 import com.vaadin.client.extensions.AbstractExtensionConnector;
 import com.vaadin.shared.Connector;
 import com.vaadin.shared.ui.Connect;
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.tests.widgetset.server.SerializerTestExtension;
 
 import elemental.json.Json;
@@ -62,8 +62,7 @@ public class SerializerTestConnector extends AbstractExtensionConnector {
                 Map<Integer, List<SimpleTestBean>> value = new HashMap<>();
                 Set<SimpleTestBean> firstKeyValue = generics.keySet().iterator()
                         .next();
-                value.put(Integer.valueOf(1),
-                        new ArrayList<>(firstKeyValue));
+                value.put(Integer.valueOf(1), new ArrayList<>(firstKeyValue));
 
                 updated.put(key, value);
 

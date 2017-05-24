@@ -16,13 +16,19 @@
 package com.vaadin.shared.ui.grid;
 
 import com.vaadin.shared.Connector;
-import com.vaadin.shared.communication.SharedState;
 
-public class ColumnState extends SharedState {
+/**
+ * Shared state for a Grid column.
+ *
+ * @author Vaadin Ltd
+ * @since 8.0
+ */
+public class ColumnState extends AbstractGridExtensionState {
 
     public String caption;
-    public String id;
-    public boolean sortable;
+    public String internalId;
+    public boolean sortable = true;
+    public boolean editable = false;
 
     /** The caption for the column hiding toggle. */
     public String hidingToggleCaption;
@@ -58,4 +64,5 @@ public class ColumnState extends SharedState {
     public boolean resizable = true;
 
     public Connector renderer;
+
 }

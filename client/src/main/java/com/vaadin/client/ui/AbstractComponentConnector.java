@@ -60,6 +60,7 @@ import com.vaadin.shared.EventId;
 import com.vaadin.shared.MouseEventDetails;
 import com.vaadin.shared.ui.ComponentStateUtil;
 import com.vaadin.shared.ui.TabIndexState;
+import com.vaadin.shared.ui.ui.UIState;
 
 public abstract class AbstractComponentConnector extends AbstractConnector
         implements ComponentConnector, HasErrorIndicator {
@@ -208,10 +209,9 @@ public abstract class AbstractComponentConnector extends AbstractConnector
 
                     @Override
                     public void run() {
-                        cancelParentTouchTimers(); // we're handling this event,
-                                                   // our parent components
-                                                   // don't need to bother with
-                                                   // it anymore.
+                        // we're handling this event, our parent components
+                        // don't need to bother with it anymore.
+                        cancelParentTouchTimers();
                         // The default context click
                         // implementation only provides the
                         // mouse coordinates relative to root
@@ -285,7 +285,7 @@ public abstract class AbstractComponentConnector extends AbstractConnector
     }
 
     protected boolean shouldHandleLongTap() {
-        return BrowserInfo.get().isTouchDevice() && !BrowserInfo.get().isIOS();
+        return BrowserInfo.get().isTouchDevice();
     }
 
     /**
@@ -437,6 +437,11 @@ public abstract class AbstractComponentConnector extends AbstractConnector
                 // + Util.getSimpleName(getWidget())
                 // + " which does not implement Focusable");
             }
+        } else if (getState() instanceof UIState
+                && getWidget() instanceof Focusable) {
+            // UI behaves like a component with TabIndexState
+            ((Focusable) getWidget())
+                    .setTabIndex(((UIState) getState()).tabIndex);
         }
         Profiler.leave(
                 "AbstractComponentConnector.onStateChanged update tab index");
@@ -700,7 +705,7 @@ public abstract class AbstractComponentConnector extends AbstractConnector
      * updated in another widget in addition to the one returned by the
      * <code>Connector</code>'s {@link #getWidget()}, or if the prefix should be
      * different. For example see
-     * {@link com.vaadin.client.ui.datefield.DateFieldConnector#setWidgetStyleNameWithPrefix(String, String, boolean)}
+     * {@link com.vaadin.client.ui.datefield.TextualDateConnector#setWidgetStyleNameWithPrefix(String, String, boolean)}
      * </p>
      *
      * @param styleName
@@ -755,7 +760,8 @@ public abstract class AbstractComponentConnector extends AbstractConnector
 
     @Override
     public TooltipInfo getTooltipInfo(Element element) {
-        return new TooltipInfo(getState().description, getState().errorMessage);
+        return new TooltipInfo(getState().description,
+                getState().descriptionContentMode, getState().errorMessage);
     }
 
     @Override

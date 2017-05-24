@@ -16,11 +16,11 @@
 
 package com.vaadin.shared.ui.loginform;
 
-import com.vaadin.shared.AbstractComponentState;
 import com.vaadin.shared.Connector;
 import com.vaadin.shared.communication.URLReference;
+import com.vaadin.shared.ui.AbstractSingleComponentContainerState;
 
-public class LoginFormState extends AbstractComponentState {
+public class LoginFormState extends AbstractSingleComponentContainerState {
     public Connector userNameFieldConnector;
     public Connector passwordFieldConnector;
     public Connector loginButtonConnector;

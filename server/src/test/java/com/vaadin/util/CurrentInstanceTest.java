@@ -20,7 +20,11 @@ import static org.junit.Assert.assertNull;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -56,83 +60,6 @@ public class CurrentInstanceTest {
     }
 
     @Test
-    public void testClearedAfterRemoveInheritable() throws Exception {
-        CurrentInstance.clearAll();
-
-        CurrentInstance.setInheritable(CurrentInstanceTest.class, this);
-        Assert.assertEquals(this,
-                CurrentInstance.get(CurrentInstanceTest.class));
-        CurrentInstance.setInheritable(CurrentInstanceTest.class, null);
-
-        assertCleared();
-    }
-
-    @Test
-    public void testInheritableThreadLocal() throws Exception {
-        final AtomicBoolean threadFailed = new AtomicBoolean(true);
-
-        CurrentInstance.setInheritable(CurrentInstanceTest.class, this);
-        Assert.assertEquals(this,
-                CurrentInstance.get(CurrentInstanceTest.class));
-        Thread t = new Thread() {
-            @Override
-            public void run() {
-                Assert.assertEquals(CurrentInstanceTest.this,
-                        CurrentInstance.get(CurrentInstanceTest.class));
-                threadFailed.set(false);
-            }
-        };
-        t.start();
-        CurrentInstance.set(CurrentInstanceTest.class, null);
-
-        assertCleared();
-        while (t.isAlive()) {
-            Thread.sleep(1000);
-        }
-        Assert.assertFalse("Thread failed", threadFailed.get());
-
-    }
-
-    @Test
-    public void testClearedAfterRemoveInSeparateThread() throws Exception {
-        final AtomicBoolean threadFailed = new AtomicBoolean(true);
-
-        CurrentInstance.setInheritable(CurrentInstanceTest.class, this);
-        Assert.assertEquals(this,
-                CurrentInstance.get(CurrentInstanceTest.class));
-        Thread t = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    Assert.assertEquals(CurrentInstanceTest.this,
-                            CurrentInstance.get(CurrentInstanceTest.class));
-                    CurrentInstance.set(CurrentInstanceTest.class, null);
-                    assertCleared();
-
-                    threadFailed.set(false);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-        t.start();
-
-        while (t.isAlive()) {
-            Thread.sleep(1000);
-        }
-        Assert.assertFalse("Thread failed", threadFailed.get());
-
-        // Clearing the threadlocal in the thread should not have cleared it
-        // here
-        Assert.assertEquals(this,
-                CurrentInstance.get(CurrentInstanceTest.class));
-
-        // Clearing the only remaining threadlocal should free all memory
-        CurrentInstance.set(CurrentInstanceTest.class, null);
-        assertCleared();
-    }
-
-    @Test
     public void testClearedWithClearAll() throws Exception {
         CurrentInstance.set(CurrentInstanceTest.class, this);
         Assert.assertEquals(this,
@@ -147,13 +74,12 @@ public class CurrentInstanceTest {
         Assert.assertNull(getInternalCurrentInstanceVariable().get());
     }
 
-    private InheritableThreadLocal<Map<Class<?>, CurrentInstance>> getInternalCurrentInstanceVariable()
+    private ThreadLocal<Map<Class<?>, CurrentInstance>> getInternalCurrentInstanceVariable()
             throws SecurityException, NoSuchFieldException,
             IllegalAccessException {
         Field f = CurrentInstance.class.getDeclaredField("instances");
         f.setAccessible(true);
-        return (InheritableThreadLocal<Map<Class<?>, CurrentInstance>>) f
-                .get(null);
+        return (ThreadLocal<Map<Class<?>, CurrentInstance>>) f.get(null);
     }
 
     public void testInheritedClearedAfterRemove() {
@@ -223,8 +149,7 @@ public class CurrentInstanceTest {
                 .setCurrent(session2);
 
         // Use weak ref to verify object is collected
-        WeakReference<VaadinSession> ref = new WeakReference<>(
-                session1);
+        WeakReference<VaadinSession> ref = new WeakReference<>(session1);
 
         session1 = null;
         waitUntilGarbageCollected(ref);
@@ -244,5 +169,22 @@ public class CurrentInstanceTest {
             Thread.sleep(100);
         }
         Assert.fail("Value was not garbage collected.");
+    }
+
+    @Test
+    public void nonInheritableThreadLocals()
+            throws InterruptedException, ExecutionException {
+        CurrentInstance.clearAll();
+        CurrentInstance.set(CurrentInstanceTest.class, this);
+
+        Assert.assertNotNull(CurrentInstance.get(CurrentInstanceTest.class));
+
+        Callable<Void> runnable = () -> {
+            Assert.assertNull(CurrentInstance.get(CurrentInstanceTest.class));
+            return null;
+        };
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        Future<Void> future = service.submit(runnable);
+        future.get();
     }
 }

@@ -38,34 +38,29 @@ import com.vaadin.ui.declarative.DesignContext;
 public class CheckBox extends AbstractField<Boolean>
         implements FieldEvents.BlurNotifier, FieldEvents.FocusNotifier {
 
-    private CheckBoxServerRpc rpc = new CheckBoxServerRpc() {
+    private CheckBoxServerRpc rpc = (boolean checked,
+            MouseEventDetails mouseEventDetails) -> {
+        if (isReadOnly()) {
+            return;
+        }
 
-        @Override
-        public void setChecked(boolean checked,
-                MouseEventDetails mouseEventDetails) {
-            if (isReadOnly()) {
-                return;
-            }
+        /*
+         * Client side updates the state before sending the event so we need to
+         * make sure the cached state is updated to match the client. If we do
+         * not do this, a reverting setValue() call in a listener will not cause
+         * the new state to be sent to the client.
+         *
+         * See #11028, #10030.
+         */
+        getUI().getConnectorTracker().getDiffState(CheckBox.this).put("checked",
+                checked);
 
-            /*
-             * Client side updates the state before sending the event so we need
-             * to make sure the cached state is updated to match the client. If
-             * we do not do this, a reverting setValue() call in a listener will
-             * not cause the new state to be sent to the client.
-             *
-             * See #11028, #10030.
-             */
-            getUI().getConnectorTracker().getDiffState(CheckBox.this)
-                    .put("checked", checked);
+        final Boolean oldValue = getValue();
+        final Boolean newValue = checked;
 
-            final Boolean oldValue = getValue();
-            final Boolean newValue = checked;
-
-            if (!newValue.equals(oldValue)) {
-                // The event is only sent if the switch state is changed
-                setValue(newValue);
-            }
-
+        if (!newValue.equals(oldValue)) {
+            // The event is only sent if the switch state is changed
+            setValue(newValue, true);
         }
     };
 
@@ -123,6 +118,25 @@ public class CheckBox extends AbstractField<Boolean>
         super.setValue(value);
     }
 
+    /**
+     * Sets the value of this CheckBox. If the new value is not equal to
+     * {@code getValue()}, fires a {@link ValueChangeEvent}. Throws
+     * {@code NullPointerException} if the value is null.
+     *
+     * @param value
+     *            the new value, not {@code null}
+     * @param userOriginated
+     *            {@code true} if this event originates from the client,
+     *            {@code false} otherwise.
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     */
+    @Override
+    protected boolean setValue(Boolean value, boolean userOriginated) {
+        Objects.requireNonNull(value, "CheckBox value must not be null");
+        return super.setValue(value, userOriginated);
+    }
+
     @Override
     public Boolean getEmptyValue() {
         return false;
@@ -145,30 +159,14 @@ public class CheckBox extends AbstractField<Boolean>
 
     @Override
     public Registration addBlurListener(BlurListener listener) {
-        addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
+        return addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
                 BlurListener.blurMethod);
-        return () -> removeListener(BlurEvent.EVENT_ID, BlurEvent.class,
-                listener);
-    }
-
-    @Override
-    @Deprecated
-    public void removeBlurListener(BlurListener listener) {
-        removeListener(BlurEvent.EVENT_ID, BlurEvent.class, listener);
     }
 
     @Override
     public Registration addFocusListener(FocusListener listener) {
-        addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
+        return addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
                 FocusListener.focusMethod);
-        return () -> removeListener(FocusEvent.EVENT_ID, FocusEvent.class,
-                listener);
-    }
-
-    @Override
-    @Deprecated
-    public void removeFocusListener(FocusListener listener) {
-        removeListener(FocusEvent.EVENT_ID, FocusEvent.class, listener);
     }
 
     /*
@@ -207,7 +205,7 @@ public class CheckBox extends AbstractField<Boolean>
     @Override
     public void writeDesign(Element design, DesignContext designContext) {
         super.writeDesign(design, designContext);
-        CheckBox def = (CheckBox) designContext.getDefaultInstance(this);
+        CheckBox def = designContext.getDefaultInstance(this);
         Attributes attr = design.attributes();
         DesignAttributeHandler.writeAttribute("checked", attr, getValue(),
                 def.getValue(), Boolean.class, designContext);

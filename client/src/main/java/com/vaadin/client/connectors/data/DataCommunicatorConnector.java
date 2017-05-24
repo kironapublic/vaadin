@@ -24,10 +24,11 @@ import com.vaadin.client.ServerConnector;
 import com.vaadin.client.data.AbstractRemoteDataSource;
 import com.vaadin.client.data.DataSource;
 import com.vaadin.client.extensions.AbstractExtensionConnector;
-import com.vaadin.server.data.DataCommunicator;
+import com.vaadin.data.provider.DataCommunicator;
 import com.vaadin.shared.data.DataCommunicatorClientRpc;
 import com.vaadin.shared.data.DataCommunicatorConstants;
 import com.vaadin.shared.data.DataRequestRpc;
+import com.vaadin.shared.extension.datacommunicator.DataCommunicatorState;
 import com.vaadin.shared.ui.Connect;
 
 import elemental.json.Json;
@@ -132,5 +133,10 @@ public class DataCommunicatorConnector extends AbstractExtensionConnector {
         } else {
             assert false : "Parent not implementing HasDataSource";
         }
+    }
+
+    @Override
+    public DataCommunicatorState getState() {
+        return (DataCommunicatorState) super.getState();
     }
 }

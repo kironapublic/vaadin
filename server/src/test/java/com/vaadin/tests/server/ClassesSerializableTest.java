@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,7 +31,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.vaadin.ui.Component;
-import java.util.Arrays;
 
 public class ClassesSerializableTest {
 
@@ -38,11 +38,12 @@ public class ClassesSerializableTest {
      * JARs that will be scanned for classes to test, in addition to classpath
      * directories.
      */
-    private static String JAR_PATTERN = ".*vaadin.*\\.jar";
+    private static final String JAR_PATTERN = ".*vaadin.*\\.jar";
 
-    private static String[] BASE_PACKAGES = { "com.vaadin" };
+    private static final String[] BASE_PACKAGES = { "com.vaadin" };
 
-    private static String[] EXCLUDED_PATTERNS = { "com\\.vaadin\\.demo\\..*", //
+    private static final String[] EXCLUDED_PATTERNS = {
+            "com\\.vaadin\\.demo\\..*", //
             "com\\.vaadin\\.external\\.org\\.apache\\.commons\\.fileupload\\..*", //
             "com\\.vaadin\\.launcher\\..*", //
             "com\\.vaadin\\.client\\..*", //
@@ -73,6 +74,7 @@ public class ClassesSerializableTest {
             // interfaces
             "com\\.vaadin\\.server\\.LegacyCommunicationManager.*", //
             "com\\.vaadin\\.buildhelpers.*", //
+            "com\\.vaadin\\.util\\.EncodeUtil.*", //
             "com\\.vaadin\\.util\\.ReflectTools.*", //
             "com\\.vaadin\\.data\\.util\\.ReflectTools.*", //
             "com\\.vaadin\\.data\\.util\\.JsonUtil.*", //
@@ -184,13 +186,22 @@ public class ClassesSerializableTest {
         }
         defaultCtor.get().setAccessible(true);
         Object instance = defaultCtor.get().newInstance();
+        serializeAndDeserialize(instance);
+    }
+
+    public static <T> T serializeAndDeserialize(T instance)
+            throws IOException, ClassNotFoundException {
         ByteArrayOutputStream bs = new ByteArrayOutputStream();
         ObjectOutputStream out = new ObjectOutputStream(bs);
         out.writeObject(instance);
         byte[] data = bs.toByteArray();
         ObjectInputStream in = new ObjectInputStream(
                 new ByteArrayInputStream(data));
-        in.readObject();
+
+        @SuppressWarnings("unchecked")
+        T readObject = (T) in.readObject();
+
+        return readObject;
     }
 
     private void failSerializableFields(
@@ -225,6 +236,7 @@ public class ClassesSerializableTest {
         Assert.fail(
                 "Serializable not implemented by the following classes and interfaces: "
                         + nonSerializableString);
+
     }
 
     private static boolean isFunctionalType(Type type) {
@@ -340,15 +352,16 @@ public class ClassesSerializableTest {
     private Collection<String> findClassesInJar(File file) throws IOException {
         Collection<String> classes = new ArrayList<>();
 
-        JarFile jar = new JarFile(file);
-        Enumeration<JarEntry> e = jar.entries();
-        while (e.hasMoreElements()) {
-            JarEntry entry = e.nextElement();
-            if (entry.getName().endsWith(".class")) {
-                String nameWithoutExtension = entry.getName()
-                        .replaceAll("\\.class", "");
-                String className = nameWithoutExtension.replace('/', '.');
-                classes.add(className);
+        try (JarFile jar = new JarFile(file)) {
+            Enumeration<JarEntry> e = jar.entries();
+            while (e.hasMoreElements()) {
+                JarEntry entry = e.nextElement();
+                if (entry.getName().endsWith(".class")) {
+                    String nameWithoutExtension = entry.getName()
+                            .replaceAll("\\.class", "");
+                    String className = nameWithoutExtension.replace('/', '.');
+                    classes.add(className);
+                }
             }
         }
         return classes;

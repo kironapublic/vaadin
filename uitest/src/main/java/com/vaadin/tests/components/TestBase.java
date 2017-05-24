@@ -1,6 +1,6 @@
 package com.vaadin.tests.components;
 
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.LegacyWindow;
@@ -39,6 +39,8 @@ public abstract class TestBase extends AbstractTestCase {
         window.addComponent(label);
 
         layout = new VerticalLayout();
+        layout.setMargin(false);
+        layout.setSpacing(false);
         window.addComponent(layout);
         ((VerticalLayout) window.getContent()).setExpandRatio(layout, 1);
 

@@ -15,19 +15,20 @@
  */
 package com.vaadin.ui;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.vaadin.server.ClientConnector;
-import com.vaadin.server.ServerRpcManager.RpcInvocationException;
-import com.vaadin.shared.ui.richtextarea.RichTextAreaServerRpc;
-import com.vaadin.tests.util.MockUI;
-import static com.vaadin.ui.ComponentTest.getRpcProxy;
 import static com.vaadin.ui.ComponentTest.isDirty;
 import static com.vaadin.ui.ComponentTest.syncToClient;
 import static com.vaadin.ui.ComponentTest.updateDiffState;
 
-public class RichTextAreaTest  {
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.vaadin.server.ClientConnector;
+import com.vaadin.server.ServerRpcManager;
+import com.vaadin.server.ServerRpcManager.RpcInvocationException;
+import com.vaadin.shared.ui.richtextarea.RichTextAreaServerRpc;
+import com.vaadin.tests.util.MockUI;
+
+public class RichTextAreaTest {
 
     @Test
     public void initiallyEmpty() {
@@ -58,7 +59,8 @@ public class RichTextAreaTest  {
 
         // Client thinks the field says "foo" but it won't be updated because
         // the field is readonly
-        getRpcProxy(rta, RichTextAreaServerRpc.class).setText("foo");
+        ServerRpcManager.getRpcProxy(rta, RichTextAreaServerRpc.class)
+                .setText("foo");
 
         // The real value will be sent back as long as the field is marked as
         // dirty and diffstate contains what the client has
@@ -74,7 +76,8 @@ public class RichTextAreaTest  {
         rta.setValue("bar");
 
         updateDiffState(rta);
-        getRpcProxy(rta, RichTextAreaServerRpc.class).setText("foo");
+        ServerRpcManager.getRpcProxy(rta, RichTextAreaServerRpc.class)
+                .setText("foo");
         Assert.assertEquals("foo", getDiffStateString(rta, "value"));
     }
 

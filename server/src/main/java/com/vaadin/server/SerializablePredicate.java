@@ -20,7 +20,7 @@ import java.util.function.Predicate;
 
 /**
  * A {@link Predicate} that is also {@link Serializable}.
- * 
+ *
  * @author Vaadin Ltd
  * @since 8.0
  * @param <T>
@@ -28,5 +28,5 @@ import java.util.function.Predicate;
  *
  */
 public interface SerializablePredicate<T> extends Predicate<T>, Serializable {
-    // Only method inherited from Function
+    // Only method inherited from Predicate
 }

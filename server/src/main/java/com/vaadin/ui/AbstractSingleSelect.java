@@ -15,20 +15,28 @@
  */
 package com.vaadin.ui;
 
-import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.jsoup.nodes.Element;
 
 import com.vaadin.data.HasValue;
-import com.vaadin.data.SelectionModel;
 import com.vaadin.data.SelectionModel.Single;
-import com.vaadin.event.selection.SingleSelectionChangeEvent;
+import com.vaadin.data.provider.DataCommunicator;
+import com.vaadin.event.selection.SingleSelectionEvent;
 import com.vaadin.event.selection.SingleSelectionListener;
-import com.vaadin.server.data.DataCommunicator;
 import com.vaadin.shared.Registration;
 import com.vaadin.shared.data.selection.SelectionServerRpc;
 import com.vaadin.shared.ui.AbstractSingleSelectState;
-import com.vaadin.util.ReflectTools;
+import com.vaadin.ui.declarative.DesignContext;
+import com.vaadin.ui.declarative.DesignException;
+
+import elemental.json.Json;
 
 /**
  * An abstract base class for listing components that only support single
@@ -43,203 +51,15 @@ import com.vaadin.util.ReflectTools;
  *
  * @since 8.0
  */
-public abstract class AbstractSingleSelect<T> extends
-        AbstractListing<T, AbstractSingleSelect<T>.AbstractSingleSelection>
+public abstract class AbstractSingleSelect<T> extends AbstractListing<T>
         implements SingleSelect<T> {
-
-    /**
-     * A base class for single selection model implementations. Listens to
-     * {@code SelectionServerRpc} invocations to track selection requests by the
-     * client. Maintaining the selection state and communicating it from the
-     * server to the client is the responsibility of the implementing class.
-     */
-    public abstract class AbstractSingleSelection
-            implements SelectionModel.Single<T> {
-
-        /**
-         * Creates a new {@code SimpleSingleSelection} instance.
-         */
-        public AbstractSingleSelection() {
-            registerRpc(new SelectionServerRpc() {
-
-                @Override
-                public void select(String key) {
-                    setSelectedFromClient(key);
-                }
-
-                @Override
-                public void deselect(String key) {
-                    if (isKeySelected(key)) {
-                        setSelectedFromClient(null);
-                    }
-                }
-            });
-        }
-
-        @Override
-        public void deselect(T item) {
-            Objects.requireNonNull(item, "deselected item cannot be null");
-            if (isSelected(item)) {
-                setSelectedFromServer(null);
-            }
-        }
-
-        @Override
-        public void select(T item) {
-            Objects.requireNonNull(item, "selected item cannot be null");
-            setSelectedFromServer(item);
-        }
-
-        /**
-         * Returns the communication key of the selected item or {@code null} if
-         * no item is selected.
-         *
-         * @return the key of the selected item if any, {@code null} otherwise.
-         */
-        protected abstract String getSelectedKey();
-
-        /**
-         * Sets the selected item based on the given communication key. If the
-         * key is {@code null}, clears the current selection if any.
-         *
-         * @param key
-         *            the key of the selected item or {@code null} to clear
-         *            selection
-         */
-        protected abstract void doSetSelectedKey(String key);
-
-        /**
-         * Sets the selection based on a client request. Does nothing if the
-         * select component is {@linkplain Component#isReadOnly()} or if the
-         * selection would not change. Otherwise updates the selection and fires
-         * a selection change event with {@code isUserOriginated == true}.
-         *
-         * @param key
-         *            the key of the item to select or {@code null} to clear
-         *            selection
-         */
-        protected void setSelectedFromClient(String key) {
-            if (isReadOnly()) {
-                return;
-            }
-            if (isKeySelected(key)) {
-                return;
-            }
-
-            doSetSelectedKey(key);
-            fireEvent(new SingleSelectionChangeEvent<>(
-                    AbstractSingleSelect.this, true));
-        }
-
-        /**
-         * Sets the selection based on server API call. Does nothing if the
-         * selection would not change; otherwise updates the selection and fires
-         * a selection change event with {@code isUserOriginated == false}.
-         *
-         * @param item
-         *            the item to select or {@code null} to clear selection
-         */
-        protected void setSelectedFromServer(T item) {
-            // TODO creates a key if item not in data source
-            String key = itemToKey(item);
-
-            if (isKeySelected(key) || isSelected(item)) {
-                return;
-            }
-
-            doSetSelectedKey(key);
-            fireEvent(new SingleSelectionChangeEvent<>(
-                    AbstractSingleSelect.this, false));
-        }
-
-        /**
-         * Returns whether the given key maps to the currently selected item.
-         *
-         * @param key
-         *            the key to test or {@code null} to test whether nothing is
-         *            selected
-         * @return {@code true} if the key equals the key of the currently
-         *         selected item (or {@code null} if no selection),
-         *         {@code false} otherwise.
-         */
-        protected boolean isKeySelected(String key) {
-            return Objects.equals(key, getSelectedKey());
-        }
-
-        /**
-         * Returns the communication key assigned to the given item.
-         *
-         * @param item
-         *            the item whose key to return
-         * @return the assigned key
-         */
-        protected String itemToKey(T item) {
-            if (item == null) {
-                return null;
-            } else {
-                // TODO creates a key if item not in data source
-                return getDataCommunicator().getKeyMapper().key(item);
-            }
-        }
-
-        /**
-         * Returns the item that the given key is assigned to, or {@code null}
-         * if there is no such item.
-         *
-         * @param key
-         *            the key whose item to return
-         * @return the associated item if any, {@code null} otherwise.
-         */
-        protected T keyToItem(String key) {
-            return getDataCommunicator().getKeyMapper().get(key);
-        }
-    }
-
-    /**
-     * A simple single selection model using the {@code AbstractSingleSelect}
-     * RPC and state to communicate with the client. Has no client-side
-     * counterpart; the listing connector is expected to handle selection.
-     * Client-to-server selection is passed via {@link SelectionServerRpc} and
-     * server-to-client via {@link AbstractSingleSelectState#selectedItemKey}.
-     */
-    protected class SimpleSingleSelection extends AbstractSingleSelection {
-
-        /**
-         * Creates a new {@code SimpleSingleSelection}.
-         */
-        public SimpleSingleSelection() {
-        }
-
-        @Override
-        public Optional<T> getSelectedItem() {
-            return Optional.ofNullable(keyToItem(getSelectedKey()));
-        }
-
-        @Override
-        protected String getSelectedKey() {
-            return getState(false).selectedItemKey;
-        }
-
-        @Override
-        protected void doSetSelectedKey(String key) {
-            getState().selectedItemKey = key;
-        }
-    }
-
-    @Deprecated
-    private static final Method SELECTION_CHANGE_METHOD = ReflectTools
-            .findMethod(SingleSelectionListener.class, "accept",
-                    SingleSelectionChangeEvent.class);
 
     /**
      * Creates a new {@code AbstractListing} with a default data communicator.
      * <p>
-     * <strong>Note:</strong> This constructor does not set a selection model
-     * for the new listing. The invoking constructor must explicitly call
-     * {@link #setSelectionModel(SelectionModel)} with an
-     * {@link AbstractSingleSelect.AbstractSingleSelection} .
      */
     protected AbstractSingleSelect() {
+        init();
     }
 
     /**
@@ -250,31 +70,27 @@ public abstract class AbstractSingleSelect<T> extends
      * {@code AbstractSingleSelect} with a custom communicator. In the common
      * case {@link AbstractSingleSelect#AbstractSingleSelect()} should be used.
      * <p>
-     * <strong>Note:</strong> This constructor does not set a selection model
-     * for the new listing. The invoking constructor must explicitly call
-     * {@link #setSelectionModel(SelectionModel)} with an
-     * {@link AbstractSingleSelect.AbstractSingleSelection} .
      *
      * @param dataCommunicator
      *            the data communicator to use, not null
      */
     protected AbstractSingleSelect(DataCommunicator<T> dataCommunicator) {
         super(dataCommunicator);
+        init();
     }
 
     /**
      * Adds a selection listener to this select. The listener is called when the
-     * value of this select is changed either by the user or programmatically.
+     * selection is changed either by the user or programmatically.
      *
      * @param listener
-     *            the value change listener, not null
+     *            the selection listener, not null
      * @return a registration for the listener
      */
     public Registration addSelectionListener(
             SingleSelectionListener<T> listener) {
-        addListener(SingleSelectionChangeEvent.class, listener,
-                SELECTION_CHANGE_METHOD);
-        return () -> removeListener(SingleSelectionChangeEvent.class, listener);
+        return addListener(SingleSelectionEvent.class, listener,
+                SingleSelectionListener.SELECTION_CHANGE_METHOD);
     }
 
     /**
@@ -285,7 +101,7 @@ public abstract class AbstractSingleSelect<T> extends
      *         otherwise
      */
     public Optional<T> getSelectedItem() {
-        return getSelectionModel().getSelectedItem();
+        return Optional.ofNullable(keyToItem(getSelectedKey()));
     }
 
     /**
@@ -296,7 +112,7 @@ public abstract class AbstractSingleSelect<T> extends
      *            the item to select or {@code null} to clear selection
      */
     public void setSelectedItem(T item) {
-        getSelectionModel().setSelectedItem(item);
+        setSelectedFromServer(item);
     }
 
     /**
@@ -336,8 +152,9 @@ public abstract class AbstractSingleSelect<T> extends
     @Override
     public Registration addValueChangeListener(
             HasValue.ValueChangeListener<T> listener) {
-        return addSelectionListener(event -> listener.accept(
-                new ValueChangeEvent<>(this, event.isUserOriginated())));
+        return addSelectionListener(
+                event -> listener.valueChange(new ValueChangeEvent<>(this,
+                        event.getOldValue(), event.isUserOriginated())));
     }
 
     @Override
@@ -369,4 +186,211 @@ public abstract class AbstractSingleSelect<T> extends
     public boolean isReadOnly() {
         return super.isReadOnly();
     }
+
+    /**
+     * Returns the communication key of the selected item or {@code null} if no
+     * item is selected.
+     *
+     * @return the key of the selected item if any, {@code null} otherwise.
+     */
+    protected String getSelectedKey() {
+        return getState(false).selectedItemKey;
+    }
+
+    /**
+     * Sets the selected item based on the given communication key. If the key
+     * is {@code null}, clears the current selection if any.
+     *
+     * @param key
+     *            the key of the selected item or {@code null} to clear
+     *            selection
+     */
+    protected void doSetSelectedKey(String key) {
+        getState().selectedItemKey = key;
+    }
+
+    /**
+     * Sets the selection based on a client request. Does nothing if the select
+     * component is {@linkplain #isReadOnly()} or if the selection would not
+     * change. Otherwise updates the selection and fires a selection change
+     * event with {@code isUserOriginated == true}.
+     *
+     * @param key
+     *            the key of the item to select or {@code null} to clear
+     *            selection
+     */
+    protected void setSelectedFromClient(String key) {
+        if (isReadOnly()) {
+            return;
+        }
+        if (isKeySelected(key)) {
+            return;
+        }
+
+        T oldSelection = getSelectedItem().orElse(getEmptyValue());
+        doSetSelectedKey(key);
+
+        // Update diffstate so that a change will be sent to the client if the
+        // selection is changed to its original value
+        updateDiffstate("selectedItemKey",
+                key == null ? Json.createNull() : Json.create(key));
+
+        fireEvent(new SingleSelectionEvent<>(AbstractSingleSelect.this,
+                oldSelection, true));
+    }
+
+    /**
+     * Sets the selection based on server API call. Does nothing if the
+     * selection would not change; otherwise updates the selection and fires a
+     * selection change event with {@code isUserOriginated == false}.
+     *
+     * @param item
+     *            the item to select or {@code null} to clear selection
+     */
+    protected void setSelectedFromServer(T item) {
+        // TODO creates a key if item not in data provider
+        String key = itemToKey(item);
+
+        if (isKeySelected(key) || isSelected(item)) {
+            return;
+        }
+
+        T oldSelection = getSelectedItem().orElse(getEmptyValue());
+        doSetSelectedKey(key);
+
+        fireEvent(new SingleSelectionEvent<>(AbstractSingleSelect.this,
+                oldSelection, false));
+    }
+
+    /**
+     * Returns whether the given key maps to the currently selected item.
+     *
+     * @param key
+     *            the key to test or {@code null} to test whether nothing is
+     *            selected
+     * @return {@code true} if the key equals the key of the currently selected
+     *         item (or {@code null} if no selection), {@code false} otherwise.
+     */
+    protected boolean isKeySelected(String key) {
+        return Objects.equals(key, getSelectedKey());
+    }
+
+    /**
+     * Returns the communication key assigned to the given item.
+     *
+     * @param item
+     *            the item whose key to return
+     * @return the assigned key
+     */
+    protected String itemToKey(T item) {
+        if (item == null) {
+            return null;
+        } else {
+            // TODO creates a key if item not in data provider
+            return getDataCommunicator().getKeyMapper().key(item);
+        }
+    }
+
+    /**
+     * Returns the item that the given key is assigned to, or {@code null} if
+     * there is no such item.
+     *
+     * @param key
+     *            the key whose item to return
+     * @return the associated item if any, {@code null} otherwise.
+     */
+    protected T keyToItem(String key) {
+        return getDataCommunicator().getKeyMapper().get(key);
+    }
+
+    /**
+     * Returns whether the given item is currently selected.
+     *
+     * @param item
+     *            the item to check, not null
+     * @return {@code true} if the item is selected, {@code false} otherwise
+     */
+    public boolean isSelected(T item) {
+        return Objects.equals(getValue(), item);
+    }
+
+    @Override
+    protected Element writeItem(Element design, T item, DesignContext context) {
+        Element element = super.writeItem(design, item, context);
+
+        if (isSelected(item)) {
+            element.attr("selected", "");
+        }
+
+        return element;
+    }
+
+    @Override
+    protected void readItems(Element design, DesignContext context) {
+        Set<T> selected = new HashSet<>();
+        List<T> items = design.children().stream()
+                .map(child -> readItem(child, selected, context))
+                .collect(Collectors.toList());
+        if (!items.isEmpty()) {
+            setItems(items);
+        }
+        selected.forEach(this::setValue);
+    }
+
+    /**
+     * Reads an Item from a design and inserts it into the data source.
+     * Hierarchical select components should override this method to recursively
+     * recursively read any child items as well.
+     *
+     * @param child
+     *            a child element representing the item
+     * @param selected
+     *            A set accumulating selected items. If the item that is read is
+     *            marked as selected, its item id should be added to this set.
+     * @param context
+     *            the DesignContext instance used in parsing
+     * @return the item id of the new item
+     *
+     * @throws DesignException
+     *             if the tag name of the {@code child} element is not
+     *             {@code option}.
+     */
+    protected T readItem(Element child, Set<T> selected,
+            DesignContext context) {
+        T item = readItem(child, context);
+
+        if (child.hasAttr("selected")) {
+            selected.add(item);
+        }
+
+        return item;
+    }
+
+    @Override
+    protected Collection<String> getCustomAttributes() {
+        Collection<String> attributes = super.getCustomAttributes();
+        // "value" is not an attribute for the component. "selected" attribute
+        // is used in "option"'s tag to mark selection which implies value for
+        // single select component
+        attributes.add("value");
+        return attributes;
+    }
+
+    private void init() {
+        registerRpc(new SelectionServerRpc() {
+
+            @Override
+            public void select(String key) {
+                setSelectedFromClient(key);
+            }
+
+            @Override
+            public void deselect(String key) {
+                if (isKeySelected(key)) {
+                    setSelectedFromClient(null);
+                }
+            }
+        });
+    }
+
 }

@@ -52,6 +52,11 @@ import com.vaadin.ui.declarative.DesignContext;
  * </p>
  *
  * <p>
+ * A location is identified with the attribute "data-location" or "location"
+ * which has the location name as its value.
+ * </p>
+ *
+ * <p>
  * The default theme handles the styles that are not defined by drawing the
  * subcomponents just as in OrderedLayout.
  * </p>
@@ -88,8 +93,6 @@ public class CustomLayout extends AbstractLayout implements LegacyComponent {
      *            Stream containing template data. Must be using UTF-8 encoding.
      *            To use a String as a template use for instance new
      *            ByteArrayInputStream("&lt;template&gt;".getBytes()).
-     * @param streamLength
-     *            Length of the templateStream
      * @throws IOException
      */
     public CustomLayout(InputStream templateStream) throws IOException {
@@ -236,9 +239,7 @@ public class CustomLayout extends AbstractLayout implements LegacyComponent {
         // Gets the locations
         String oldLocation = null;
         String newLocation = null;
-        for (final Iterator<String> i = slots.keySet().iterator(); i
-                .hasNext();) {
-            final String location = i.next();
+        for (final String location : slots.keySet()) {
             final Component component = slots.get(location);
             if (component == oldComponent) {
                 oldLocation = location;

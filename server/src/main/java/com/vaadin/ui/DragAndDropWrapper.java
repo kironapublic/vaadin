@@ -41,6 +41,7 @@ import com.vaadin.shared.ui.dd.HorizontalDropLocation;
 import com.vaadin.shared.ui.dd.VerticalDropLocation;
 import com.vaadin.shared.ui.draganddropwrapper.DragAndDropWrapperConstants;
 import com.vaadin.shared.ui.draganddropwrapper.DragAndDropWrapperServerRpc;
+import com.vaadin.shared.ui.draganddropwrapper.DragAndDropWrapperState;
 import com.vaadin.ui.declarative.DesignContext;
 
 @SuppressWarnings("serial")
@@ -112,12 +113,8 @@ public class DragAndDropWrapper extends CustomComponent
 
     }
 
-    private final DragAndDropWrapperServerRpc rpc = new DragAndDropWrapperServerRpc() {
-
-        @Override
-        public void poll() {
-            // #19616 RPC to poll the server for changes
-        }
+    private final DragAndDropWrapperServerRpc rpc = () -> {
+        // #19616 RPC to poll the server for changes
     };
 
     private Map<String, ProxyReceiver> receivers = new HashMap<>();
@@ -355,7 +352,7 @@ public class DragAndDropWrapper extends CustomComponent
 
     final class ProxyReceiver implements StreamVariable {
 
-        private String id;
+        private final String id;
         private Html5File file;
 
         public ProxyReceiver(String id, Html5File file) {
@@ -429,7 +426,7 @@ public class DragAndDropWrapper extends CustomComponent
         class ReceivingEventWrapper implements StreamingErrorEvent,
                 StreamingEndEvent, StreamingStartEvent, StreamingProgressEvent {
 
-            private StreamingEvent wrappedEvent;
+            private final StreamingEvent wrappedEvent;
 
             ReceivingEventWrapper(StreamingEvent e) {
                 wrappedEvent = e;
@@ -505,5 +502,15 @@ public class DragAndDropWrapper extends CustomComponent
             child.attr(":drag-image", true);
             design.appendChild(child);
         }
+    }
+
+    @Override
+    protected DragAndDropWrapperState getState() {
+        return (DragAndDropWrapperState) super.getState();
+    }
+
+    @Override
+    protected DragAndDropWrapperState getState(boolean markAsDirty) {
+        return (DragAndDropWrapperState) super.getState(markAsDirty);
     }
 }

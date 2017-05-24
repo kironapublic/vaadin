@@ -13,9 +13,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-/**
- *
- */
 package com.vaadin.event.dd.acceptcriteria;
 
 import com.vaadin.event.dd.DragAndDropEvent;
@@ -33,7 +30,7 @@ import com.vaadin.server.PaintTarget;
  */
 public class Or extends ClientSideCriterion {
     private static final long serialVersionUID = 1L;
-    private AcceptCriterion criteria[];
+    private final AcceptCriterion criteria[];
 
     /**
      * @param criteria

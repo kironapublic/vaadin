@@ -44,15 +44,11 @@ public abstract class AbstractOrderedLayout extends AbstractLayout
         implements Layout.AlignmentHandler, Layout.SpacingHandler,
         LayoutClickNotifier, Layout.MarginHandler {
 
-    private AbstractOrderedLayoutServerRpc rpc = new AbstractOrderedLayoutServerRpc() {
-
-        @Override
-        public void layoutClick(MouseEventDetails mouseDetails,
-                Connector clickedConnector) {
-            fireEvent(LayoutClickEvent.createEvent(AbstractOrderedLayout.this,
-                    mouseDetails, clickedConnector));
-        }
-    };
+    private final AbstractOrderedLayoutServerRpc rpc = (
+            MouseEventDetails mouseDetails,
+            Connector clickedConnector) -> fireEvent(
+                    LayoutClickEvent.createEvent(AbstractOrderedLayout.this,
+                            mouseDetails, clickedConnector));
 
     public static final Alignment ALIGNMENT_DEFAULT = Alignment.TOP_LEFT;
 
@@ -211,10 +207,7 @@ public abstract class AbstractOrderedLayout extends AbstractLayout
         int oldLocation = -1;
         int newLocation = -1;
         int location = 0;
-        for (final Iterator<Component> i = components.iterator(); i
-                .hasNext();) {
-            final Component component = i.next();
-
+        for (final Component component : components) {
             if (component == oldComponent) {
                 oldLocation = location;
             }
@@ -369,11 +362,9 @@ public abstract class AbstractOrderedLayout extends AbstractLayout
 
     @Override
     public Registration addLayoutClickListener(LayoutClickListener listener) {
-        addListener(EventId.LAYOUT_CLICK_EVENT_IDENTIFIER,
+        return addListener(EventId.LAYOUT_CLICK_EVENT_IDENTIFIER,
                 LayoutClickEvent.class, listener,
                 LayoutClickListener.clickMethod);
-        return () -> removeListener(EventId.LAYOUT_CLICK_EVENT_IDENTIFIER,
-                LayoutClickEvent.class, listener);
     }
 
     @Override
@@ -510,8 +501,7 @@ public abstract class AbstractOrderedLayout extends AbstractLayout
         // write default attributes
         super.writeDesign(design, designContext);
 
-        AbstractOrderedLayout def = (AbstractOrderedLayout) designContext
-                .getDefaultInstance(this);
+        AbstractOrderedLayout def = designContext.getDefaultInstance(this);
 
         writeMargin(design, getMargin(), def.getMargin(), designContext);
 

@@ -19,13 +19,15 @@ package com.vaadin.server;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.Writer;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -49,13 +51,13 @@ public class JsonPaintTarget implements PaintTarget {
 
     private final static String UIDL_ARG_NAME = "name";
 
-    private final Stack<String> mOpenTags;
+    private final Deque<String> mOpenTags;
 
-    private final Stack<JsonTag> openJsonTags;
+    private final Deque<JsonTag> openJsonTags;
 
     // these match each other element-wise
-    private final Stack<ClientConnector> openPaintables;
-    private final Stack<String> openPaintableTags;
+    private final Deque<ClientConnector> openPaintables;
+    private final Deque<String> openPaintableTags;
 
     private final PrintWriter uidlBuffer;
 
@@ -96,11 +98,11 @@ public class JsonPaintTarget implements PaintTarget {
         uidlBuffer = new PrintWriter(outWriter);
 
         // Initialize tag-writing
-        mOpenTags = new Stack<>();
-        openJsonTags = new Stack<>();
+        mOpenTags = new ArrayDeque<>();
+        openJsonTags = new ArrayDeque<>();
 
-        openPaintables = new Stack<>();
-        openPaintableTags = new Stack<>();
+        openPaintables = new ArrayDeque<>();
+        openPaintableTags = new ArrayDeque<>();
 
         cacheEnabled = cachingRequired;
     }
@@ -156,7 +158,7 @@ public class JsonPaintTarget implements PaintTarget {
      * If the parent tag is closed before every child tag is closed an
      * PaintException is raised.
      *
-     * @param tag
+     * @param tagName
      *            the name of the end tag.
      * @throws PaintException
      *             if the paint operation failed.
@@ -443,7 +445,7 @@ public class JsonPaintTarget implements PaintTarget {
                     "Parameters must be non-null strings");
         }
         final StringBuilder buf = new StringBuilder();
-        buf.append("\"" + name + "\":[");
+        buf.append("\"").append(name).append("\":[");
         for (int i = 0; i < values.length; i++) {
             if (i > 0) {
                 buf.append(",");
@@ -728,11 +730,11 @@ public class JsonPaintTarget implements PaintTarget {
     class JsonTag implements Serializable {
         boolean firstField = false;
 
-        Vector<Object> variables = new Vector<>();
+        List<Object> variables = new ArrayList<>();
 
-        Vector<Object> children = new Vector<>();
+        List<Object> children = new ArrayList<>();
 
-        Vector<Object> attr = new Vector<>();
+        List<Object> attr = new ArrayList<>();
 
         StringBuilder data = new StringBuilder();
 
@@ -743,7 +745,7 @@ public class JsonPaintTarget implements PaintTarget {
         private boolean tagClosed = false;
 
         public JsonTag(String tagName) {
-            data.append("[\"" + tagName + "\"");
+            data.append("[\"").append(tagName).append("\"");
         }
 
         private void closeTag() {
@@ -838,7 +840,7 @@ public class JsonPaintTarget implements PaintTarget {
         }
 
         private String variablesAsJsonObject() {
-            if (variables.size() == 0) {
+            if (variables.isEmpty()) {
                 return "";
             }
             final StringBuilder buf = new StringBuilder();

@@ -131,7 +131,7 @@ public class AtmospherePushConnection implements PushConnection {
         CONNECTED;
     }
 
-    private UI ui;
+    private final UI ui;
     private transient State state = State.DISCONNECTED;
     private transient AtmosphereResource resource;
     private transient FragmentedMessage incomingMessage;
@@ -229,8 +229,8 @@ public class AtmospherePushConnection implements PushConnection {
     }
 
     /**
-     * Associates this {@code AtmospherePushConnection} with the given
-     * {@AtmosphereResource} representing an established push connection. If
+     * Associates this {@link AtmospherePushConnection} with the given
+     * {@link AtmosphereResource} representing an established push connection. If
      * already connected, calls {@link #disconnect()} first. If there is a
      * deferred push, carries it out via the new connection.
      *
@@ -258,17 +258,21 @@ public class AtmospherePushConnection implements PushConnection {
     }
 
     /**
-     * @return the UI associated with this connection.
+     * Gets the UI this push connection is associated with.
+     *
+     * @return the UI associated with this connection
      */
-    protected UI getUI() {
+    public UI getUI() {
         return ui;
     }
 
     /**
-     * @return The AtmosphereResource associated with this connection or null if
-     *         connection not open.
+     * Gets the atmosphere resource associated with this connection.
+     *
+     * @return The AtmosphereResource associated with this connection or
+     *         <code>null</code> if the connection is not open.
      */
-    protected AtmosphereResource getResource() {
+    public AtmosphereResource getResource() {
         return resource;
     }
 

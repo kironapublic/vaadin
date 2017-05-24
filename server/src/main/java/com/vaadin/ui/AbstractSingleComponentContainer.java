@@ -25,6 +25,7 @@ import com.vaadin.server.ComponentSizeValidator;
 import com.vaadin.server.VaadinService;
 import com.vaadin.server.VaadinSession;
 import com.vaadin.shared.Registration;
+import com.vaadin.shared.ui.AbstractSingleComponentContainerState;
 import com.vaadin.ui.declarative.DesignContext;
 import com.vaadin.ui.declarative.DesignException;
 
@@ -60,9 +61,7 @@ public abstract class AbstractSingleComponentContainer extends AbstractComponent
     @Override
     public Registration addComponentAttachListener(
             ComponentAttachListener listener) {
-        addListener(ComponentAttachEvent.class, listener,
-                ComponentAttachListener.attachMethod);
-        return () -> removeListener(ComponentAttachEvent.class, listener,
+        return addListener(ComponentAttachEvent.class, listener,
                 ComponentAttachListener.attachMethod);
     }
 
@@ -79,9 +78,7 @@ public abstract class AbstractSingleComponentContainer extends AbstractComponent
     @Override
     public Registration addComponentDetachListener(
             ComponentDetachListener listener) {
-        addListener(ComponentDetachEvent.class, listener,
-                ComponentDetachListener.detachMethod);
-        return () -> removeListener(ComponentDetachEvent.class, listener,
+        return addListener(ComponentDetachEvent.class, listener,
                 ComponentDetachListener.detachMethod);
     }
 
@@ -356,4 +353,17 @@ public abstract class AbstractSingleComponentContainer extends AbstractComponent
             design.appendChild(childNode);
         }
     }
+
+    @Override
+    protected AbstractSingleComponentContainerState getState() {
+        return (AbstractSingleComponentContainerState) super.getState();
+    }
+
+    @Override
+    protected AbstractSingleComponentContainerState getState(
+            boolean markAsDirty) {
+        return (AbstractSingleComponentContainerState) super.getState(
+                markAsDirty);
+    }
+
 }

@@ -17,7 +17,7 @@
 package com.vaadin.data.validator;
 
 import com.vaadin.data.ValidationResult;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.ValueContext;
 
 /**
  * Verifies that the length of a string is within the given range.
@@ -28,7 +28,7 @@ import com.vaadin.data.util.converter.ValueContext;
 @SuppressWarnings("serial")
 public class StringLengthValidator extends AbstractValidator<String> {
 
-    private RangeValidator<Integer> validator;
+    private final RangeValidator<Integer> validator;
 
     /**
      * Creates a new StringLengthValidator with a given error message and

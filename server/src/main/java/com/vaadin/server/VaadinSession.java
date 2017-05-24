@@ -48,6 +48,7 @@ import javax.servlet.http.HttpSessionBindingEvent;
 import javax.servlet.http.HttpSessionBindingListener;
 
 import com.vaadin.event.EventRouter;
+import com.vaadin.shared.Registration;
 import com.vaadin.shared.communication.PushMode;
 import com.vaadin.ui.UI;
 import com.vaadin.util.CurrentInstance;
@@ -78,14 +79,8 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
      * @author Vaadin Ltd
      */
     public static class FutureAccess extends FutureTask<Void> {
-        /**
-         * Snapshot of all non-inheritable current instances at the time this
-         * object was created.
-         */
-        private final Map<Class<?>, CurrentInstance> instances = CurrentInstance
-                .getInstances(true);
         private final VaadinSession session;
-        private Runnable runnable;
+        private final Runnable runnable;
 
         /**
          * Creates an instance for the given runnable
@@ -117,18 +112,6 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
              */
             VaadinService.verifyNoOtherSessionLocked(session);
             return super.get();
-        }
-
-        /**
-         * Gets the current instance values that should be used when running
-         * this task.
-         *
-         * @see CurrentInstance#restoreInstances(Map)
-         *
-         * @return a map of current instances.
-         */
-        public Map<Class<?>, CurrentInstance> getCurrentInstances() {
-            return instances;
         }
 
         /**
@@ -632,6 +615,7 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
      *
      * @param converterFactory
      *            The converter factory used in the session
+     * @since 8.0
      */
     @Deprecated
     public void setConverterFactory(Object converterFactory) {
@@ -693,11 +677,10 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
 
     /**
      * Gets the currently used session. The current session is automatically
-     * defined when processing requests to the server and in threads started at
-     * a point when the current session is defined (see
-     * {@link InheritableThreadLocal}). In other cases, (e.g. from background
-     * threads started in some other way), the current session is not
-     * automatically defined.
+     * defined when processing requests related to the session (see
+     * {@link ThreadLocal}) and in {@link VaadinSession#access(Command)} and
+     * {@link UI#access(Command)}. In other cases, (e.g. from background
+     * threads, the current session is not automatically defined.
      * <p>
      * The session is stored using a weak reference to avoid leaking memory in
      * case it is not explicitly cleared.
@@ -734,7 +717,7 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
      * @since 7.0
      */
     public static void setCurrent(VaadinSession session) {
-        CurrentInstance.setInheritable(VaadinSession.class, session);
+        CurrentInstance.set(VaadinSession.class, session);
     }
 
     /**
@@ -753,7 +736,15 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
 
     private int connectorIdSequence = 0;
 
+    /*
+     * Despite section 6 of RFC 4122, this particular use of UUID *is* adequate
+     * for security capabilities. Type 4 UUIDs contain 122 bits of random data,
+     * and UUID.randomUUID() is defined to use a cryptographically secure random
+     * generator.
+     */
     private final String csrfToken = UUID.randomUUID().toString();
+
+    private final String pushId = UUID.randomUUID().toString();
 
     /**
      * Generate an id for the given Connector. Connectors must not call this
@@ -822,13 +813,21 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
      *
      * @param listener
      *            the bootstrap listener to add
+     * @return a registration object for removing the listener
+     * @since 8.0
      */
-    public void addBootstrapListener(BootstrapListener listener) {
+    public Registration addBootstrapListener(BootstrapListener listener) {
         assert hasLock();
         eventRouter.addListener(BootstrapFragmentResponse.class, listener,
                 BOOTSTRAP_FRAGMENT_METHOD);
         eventRouter.addListener(BootstrapPageResponse.class, listener,
                 BOOTSTRAP_PAGE_METHOD);
+        return () -> {
+            eventRouter.removeListener(BootstrapFragmentResponse.class,
+                    listener, BOOTSTRAP_FRAGMENT_METHOD);
+            eventRouter.removeListener(BootstrapPageResponse.class, listener,
+                    BOOTSTRAP_PAGE_METHOD);
+        };
     }
 
     /**
@@ -838,7 +837,11 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
      *
      * @param listener
      *            the bootstrap listener to remove
+     * @deprecated Use a {@link Registration} object returned by
+     *             {@link #addBootstrapListener(BootstrapListener)} to remove a
+     *             listener
      */
+    @Deprecated
     public void removeBootstrapListener(BootstrapListener listener) {
         assert hasLock();
         eventRouter.removeListener(BootstrapFragmentResponse.class, listener,
@@ -1361,12 +1364,11 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
      * <p>
      * Please note that the runnable might be invoked on a different thread or
      * later on the current thread, which means that custom thread locals might
-     * not have the expected values when the runnable is executed. Inheritable
-     * values in {@link CurrentInstance} will have the same values as when this
-     * method was invoked. {@link VaadinSession#getCurrent()} and
-     * {@link VaadinService#getCurrent()} are set according to this session
-     * before executing the runnable. Non-inheritable CurrentInstance values
-     * including {@link VaadinService#getCurrentRequest()} and
+     * not have the expected values when the command is executed.
+     * {@link VaadinSession#getCurrent()} and {@link VaadinService#getCurrent()}
+     * are set according to this session before executing the command. Other
+     * standard CurrentInstance values such as
+     * {@link VaadinService#getCurrentRequest()} and
      * {@link VaadinService#getCurrentResponse()} will not be defined.
      * </p>
      * <p>
@@ -1415,6 +1417,18 @@ public class VaadinSession implements HttpSessionBindingListener, Serializable {
     public String getCsrfToken() {
         assert hasLock();
         return csrfToken;
+    }
+
+    /**
+     * Gets the push connection identifier for this session. Used when
+     * establishing a push connection with the client.
+     *
+     * @return the push connection identifier string
+     * @since 8.0.6
+     */
+    public String getPushId() {
+        assert hasLock();
+        return pushId;
     }
 
     /**

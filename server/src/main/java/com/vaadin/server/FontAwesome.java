@@ -31,8 +31,12 @@ package com.vaadin.server;
  *
  * @since 7.2
  * @author Vaadin Ltd
- * @see http://fortawesome.github.io/Font-Awesome/
+ * @see http://fontawesome.github.io/Font-Awesome/
+ * @deprecated Since 8.0 replaced with included Vaadin Icons
+ *             https://vaadin.com/icons (#7979). Will not be updated to include
+ *             new icons.
  */
+@Deprecated
 public enum FontAwesome implements FontIcon {
     _500PX(0XF26E), //
     ADJUST(0XF042), //
@@ -731,7 +735,7 @@ public enum FontAwesome implements FontIcon {
     ;
 
     public static final String FONT_FAMILY = "FontAwesome";
-    private int codepoint;
+    private final int codepoint;
 
     FontAwesome(int codepoint) {
         this.codepoint = codepoint;

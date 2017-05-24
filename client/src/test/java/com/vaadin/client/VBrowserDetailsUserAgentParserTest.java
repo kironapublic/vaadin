@@ -20,9 +20,13 @@ public class VBrowserDetailsUserAgentParserTest {
     private static final String FIREFOX_30B5_MAC = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9b5) Gecko/2008032619 Firefox/3.0b5";
     private static final String FIREFOX_40B7_WIN = "Mozilla/5.0 (Windows NT 5.1; rv:2.0b7) Gecko/20100101 Firefox/4.0b7";
     private static final String FIREFOX_40B11_WIN = "Mozilla/5.0 (Windows NT 5.1; rv:2.0b11) Gecko/20100101 Firefox/4.0b11";
+    private static final String FIREFOX_SUPPORTED = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:45.0) Gecko/20100101 Firefox/45.0";
     private static final String KONQUEROR_LINUX = "Mozilla/5.0 (compatible; Konqueror/3.5; Linux) KHTML/3.5.5 (like Gecko) (Exabot-Thumbnails)";
 
     private static final String IE11_WINDOWS_7 = "Mozilla/5.0 (Windows NT 6.1; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; rv:11.0) like Gecko";
+    private static final String IE11_WINDOWS_7_COMPATIBILITY_VIEW_IE7 = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; WOW64; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; .NET4.0E)";
+    private static final String IE11_WINDOWS_10_COMPATIBILITY_VIEW_IE7 = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E)";
+    private static final String IE11_INITIAL_WINDOWS_10_COMPATIBILITY_VIEW_IE7 = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; WOW64; Trident/8.0; .NET4.0C; .NET4.0E)";
     private static final String IE11_WINDOWS_PHONE_8_1_UPDATE = "Mozilla/5.0 (Mobile; Windows Phone 8.1; Android 4.0; ARM; Trident/7.0; Touch; rv:11.0; IEMobile/11.0; NOKIA; Lumia 920) Like iPhone OS 7_0_3 Mac OS X AppleWebKit/537 (KHTML, like Gecko) Mobile Safari/537";
 
     // "Version/" was added in 10.00
@@ -344,6 +348,39 @@ public class VBrowserDetailsUserAgentParserTest {
     }
 
     @Test
+    public void testIE11Windows7CompatibilityViewIE7() {
+        VBrowserDetails bd = new VBrowserDetails(IE11_WINDOWS_7_COMPATIBILITY_VIEW_IE7);
+        assertTrident(bd);
+        assertEngineVersion(bd, 7);
+        assertIE(bd);
+        assertBrowserMajorVersion(bd, 11);
+        assertBrowserMinorVersion(bd, 0);
+        assertWindows(bd);
+    }
+
+    @Test
+    public void testIE11Windows10CompatibilityViewIE7() {
+        VBrowserDetails bd = new VBrowserDetails(IE11_WINDOWS_10_COMPATIBILITY_VIEW_IE7);
+        assertTrident(bd);
+        assertEngineVersion(bd, 7);
+        assertIE(bd);
+        assertBrowserMajorVersion(bd, 11);
+        assertBrowserMinorVersion(bd, 0);
+        assertWindows(bd);
+    }
+
+    @Test
+    public void testIE11InitialWindows10CompatibilityViewIE7() {
+        VBrowserDetails bd = new VBrowserDetails(IE11_INITIAL_WINDOWS_10_COMPATIBILITY_VIEW_IE7);
+        assertTrident(bd);
+        assertEngineVersion(bd, 7);
+        assertIE(bd);
+        assertBrowserMajorVersion(bd, 11);
+        assertBrowserMinorVersion(bd, 0);
+        assertWindows(bd);
+    }
+
+    @Test
     public void testIE11WindowsPhone81Update() {
         VBrowserDetails bd = new VBrowserDetails(IE11_WINDOWS_PHONE_8_1_UPDATE);
         assertTrident(bd);
@@ -371,6 +408,15 @@ public class VBrowserDetailsUserAgentParserTest {
         assertBrowserMajorVersion(bd, 2);
         assertBrowserMinorVersion(bd, 1);
         assertMacOSX(bd);
+    }
+
+    @Test
+    public void checkFFsupportedVersions() {
+        VBrowserDetails details = new VBrowserDetails(FIREFOX_40B11_WIN);
+        Assert.assertTrue(details.isTooOldToFunctionProperly());
+
+        details = new VBrowserDetails(FIREFOX_SUPPORTED);
+        Assert.assertFalse(details.isTooOldToFunctionProperly());
     }
 
     /*

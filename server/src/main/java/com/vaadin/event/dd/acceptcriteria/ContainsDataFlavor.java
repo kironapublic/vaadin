@@ -13,9 +13,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-/**
- *
- */
 package com.vaadin.event.dd.acceptcriteria;
 
 import com.vaadin.event.Transferable;
@@ -32,7 +29,7 @@ import com.vaadin.server.PaintTarget;
  */
 public class ContainsDataFlavor extends ClientSideCriterion {
 
-    private String dataFlavorId;
+    private final String dataFlavorId;
 
     /**
      * Constructs a new instance of {@link ContainsDataFlavor}.

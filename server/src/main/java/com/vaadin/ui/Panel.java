@@ -53,11 +53,8 @@ public class Panel extends AbstractSingleComponentContainer
      */
     protected ActionManager actionManager;
 
-    private PanelServerRpc rpc = new PanelServerRpc() {
-        @Override
-        public void click(MouseEventDetails mouseDetails) {
-            fireEvent(new ClickEvent(Panel.this, mouseDetails));
-        }
+    private PanelServerRpc rpc = (MouseEventDetails mouseDetails) -> {
+        fireEvent(new ClickEvent(Panel.this, mouseDetails));
     };
 
     /**
@@ -103,15 +100,6 @@ public class Panel extends AbstractSingleComponentContainer
         setCaption(caption);
     }
 
-    /**
-     * Sets the caption of the panel.
-     *
-     * Note that the caption is interpreted as HTML and therefore care should be
-     * taken not to enable HTML injection and XSS attacks using panel captions.
-     * This behavior may change in future versions.
-     *
-     * @see AbstractComponent#setCaption(String)
-     */
     @Override
     public void setCaption(String caption) {
         super.setCaption(caption);
@@ -274,17 +262,16 @@ public class Panel extends AbstractSingleComponentContainer
      * @param listener
      *            The listener to add, not null
      * @return a registration object for removing the listener
+     * @since 8.0
      */
     public Registration addClickListener(ClickListener listener) {
-        addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class, listener,
-                ClickListener.clickMethod);
-        return () -> removeListener(EventId.CLICK_EVENT_IDENTIFIER,
-                ClickEvent.class, listener);
+        return addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class,
+                listener, ClickListener.clickMethod);
     }
 
     /**
      * Remove a click listener from the Panel. The listener should earlier have
-     * been added using {@link #addListener(ClickListener)}.
+     * been added using {@link #addClickListener(ClickListener)}.
      *
      * @param listener
      *            The listener to remove
@@ -348,7 +335,7 @@ public class Panel extends AbstractSingleComponentContainer
     public void writeDesign(Element design, DesignContext designContext) {
         super.writeDesign(design, designContext);
         // handle tabindex
-        Panel def = (Panel) designContext.getDefaultInstance(this);
+        Panel def = designContext.getDefaultInstance(this);
     }
 
 }

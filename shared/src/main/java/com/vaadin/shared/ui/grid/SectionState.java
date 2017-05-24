@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.vaadin.shared.Connector;
 
@@ -27,7 +28,7 @@ import com.vaadin.shared.Connector;
  * Shared state for Grid headers and footers.
  *
  * @author Vaadin Ltd
- * @since 7.4
+ * @since 8.0
  */
 public class SectionState implements Serializable {
 
@@ -37,11 +38,19 @@ public class SectionState implements Serializable {
         /** The map from column ids to the cells in this row. */
         public Map<String, CellState> cells = new HashMap<>();
 
+        /** The map from a joint cell to column id sets in this row. */
+        public Map<CellState, Set<String>> cellGroups = new HashMap<>();
+
         /**
          * Whether this row is the default header row. Always false for footer
          * rows.
          */
         public boolean defaultHeader = false;
+
+        /**
+         * The style name for the row. Null if none.
+         */
+        public String styleName = null;
     }
 
     /** The state of a header or footer cell. */

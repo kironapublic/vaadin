@@ -15,10 +15,10 @@
  */
 package com.vaadin.data;
 
-import java.util.function.Function;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.vaadin.server.SerializableFunction;
 
 /**
  * @author Vaadin Ltd
@@ -51,17 +51,17 @@ public class ResultTest {
     public void of_noException() {
         Result<String> result = Result.of(() -> "", exception -> null);
         Assert.assertTrue(result instanceof SimpleResult);
-        Assert.assertFalse(((SimpleResult<?>) result).isError());
+        Assert.assertFalse(result.isError());
     }
 
     @Test
     public void of_exception() {
         String message = "foo";
-        Result<String> result = Result.<String> of(() -> {
+        Result<String> result = Result.of(() -> {
             throw new RuntimeException();
         }, exception -> message);
         Assert.assertTrue(result instanceof SimpleResult);
-        Assert.assertTrue(((SimpleResult<?>) result).isError());
+        Assert.assertTrue(result.isError());
         Assert.assertEquals(message, result.getMessage().get());
     }
 
@@ -71,7 +71,8 @@ public class ResultTest {
         Result<String> result = new SimpleResult<String>("foo", null) {
 
             @Override
-            public <S> Result<S> flatMap(Function<String, Result<S>> mapper) {
+            public <S> Result<S> flatMap(
+                    SerializableFunction<String, Result<S>> mapper) {
                 return mapper.apply("foo");
             }
         };
@@ -80,7 +81,7 @@ public class ResultTest {
             return "bar";
         });
         Assert.assertTrue(mapResult instanceof SimpleResult);
-        Assert.assertFalse(((SimpleResult<?>) mapResult).isError());
+        Assert.assertFalse(mapResult.isError());
         mapResult.ifOk(v -> Assert.assertEquals("bar", v));
     }
 
@@ -90,7 +91,8 @@ public class ResultTest {
         Result<String> result = new SimpleResult<String>("foo", null) {
 
             @Override
-            public <S> Result<S> flatMap(Function<String, Result<S>> mapper) {
+            public <S> Result<S> flatMap(
+                    SerializableFunction<String, Result<S>> mapper) {
                 return new SimpleResult<>(null, "bar");
             }
         };
@@ -99,7 +101,7 @@ public class ResultTest {
             return "somevalue";
         });
         Assert.assertTrue(mapResult instanceof SimpleResult);
-        Assert.assertTrue(((SimpleResult<?>) mapResult).isError());
+        Assert.assertTrue(mapResult.isError());
         mapResult.ifError(msg -> Assert.assertEquals("bar", msg));
     }
 }
