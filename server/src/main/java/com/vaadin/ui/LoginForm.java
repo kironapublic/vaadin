@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.vaadin.server.StreamResource;
+import com.vaadin.shared.ApplicationConstants;
+import com.vaadin.shared.Registration;
 import com.vaadin.shared.ui.loginform.LoginFormConstants;
 import com.vaadin.shared.ui.loginform.LoginFormRpc;
 import com.vaadin.shared.ui.loginform.LoginFormState;
@@ -38,17 +40,11 @@ import com.vaadin.util.ReflectTools;
  * passed to that method. The supplied components are specially treated so that
  * they work with password managers.
  * <p>
- * If you need to change the URL as part of the login procedure, call
- * {@link #setLoginMode(LoginMode)} with the argument {@link LoginMode#DEFERRED}
- * in your implementation of
- * {@link #createContent(com.vaadin.ui.TextField, com.vaadin.ui.PasswordField, com.vaadin.ui.Button)
- * createContent}.
- * <p>
  * To customize the fields or to replace them with your own implementations, you
  * can override {@link #createUsernameField()}, {@link #createPasswordField()}
  * and {@link #createLoginButton()}. These methods are called automatically and
  * cannot be called by your code. Captions can be reset by overriding
- * {@link #getUsernameFieldCaption()}, {@link #getPasswordFieldCaption()} and
+ * {@link #getUsernameCaption()}, {@link #getPasswordCaption()} and
  * {@link #getLoginButtonCaption()}.
  * <p>
  * Note that the API of LoginForm changed significantly in Vaadin 7.7.
@@ -98,6 +94,7 @@ public class LoginForm extends AbstractSingleComponentContainer {
     /**
      * Listener triggered when a login occurs in a {@link LoginForm}.
      */
+    @FunctionalInterface
     public interface LoginListener extends Serializable {
         /**
          * Event method invoked when the login button is pressed in a login
@@ -275,9 +272,9 @@ public class LoginForm extends AbstractSingleComponentContainer {
      * implementations, override {@link #createUsernameField()},
      * {@link #createPasswordField()} and {@link #createLoginButton()}. If you
      * only want to change the default captions, override
-     * {@link #getUsernameFieldCaption()}, {@link #getPasswordFieldCaption()}
-     * and {@link #getLoginButtonCaption()}. You do not have to use the login
-     * button in your layout.
+     * {@link #getUsernameCaption()}, {@link #getPasswordCaption()} and
+     * {@link #getLoginButtonCaption()}. You do not have to use the login button
+     * in your layout.
      *
      * @param userNameField
      *            the user name text field
@@ -311,7 +308,7 @@ public class LoginForm extends AbstractSingleComponentContainer {
 
         StreamResource resource = new StreamResource(new LoginStreamSource(),
                 LoginFormConstants.LOGIN_RESOURCE_NAME);
-        resource.setMIMEType("text/html; charset=utf-8");
+        resource.setMIMEType(ApplicationConstants.CONTENT_TYPE_TEXT_HTML_UTF_8);
         resource.setCacheTime(-1);
         setResource(LoginFormConstants.LOGIN_RESOURCE_NAME, resource);
 
@@ -325,17 +322,17 @@ public class LoginForm extends AbstractSingleComponentContainer {
 
     private TextField getUsernameField() {
         assert initialized;
-        return (TextField) getState().userNameFieldConnector;
+        return (TextField) getState(false).userNameFieldConnector;
     }
 
     private PasswordField getPasswordField() {
         assert initialized;
-        return (PasswordField) getState().passwordFieldConnector;
+        return (PasswordField) getState(false).passwordFieldConnector;
     }
 
     private Button getLoginButton() {
         assert initialized;
-        return (Button) getState().loginButtonConnector;
+        return (Button) getState(false).loginButtonConnector;
     }
 
     /**
@@ -362,9 +359,11 @@ public class LoginForm extends AbstractSingleComponentContainer {
      *
      * @param listener
      *            the listener to add
+     * @return a registration object for removing the listener
+     * @since 8.0
      */
-    public void addLoginListener(LoginListener listener) {
-        addListener(LoginEvent.class, listener, ON_LOGIN_METHOD);
+    public Registration addLoginListener(LoginListener listener) {
+        return addListener(LoginEvent.class, listener, ON_LOGIN_METHOD);
     }
 
     /**
@@ -372,7 +371,11 @@ public class LoginForm extends AbstractSingleComponentContainer {
      *
      * @param listener
      *            the listener to remove
+     * @deprecated As of 8.0, replaced by {@link Registration#remove()} in the
+     *             registration object returned from
+     *             {@link #addLoginListener(LoginListener)}.
      */
+    @Deprecated
     public void removeLoginListener(LoginListener listener) {
         removeListener(LoginEvent.class, listener, ON_LOGIN_METHOD);
     }

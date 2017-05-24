@@ -6,27 +6,50 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.jsoup.nodes.Element;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.vaadin.server.data.BackEndDataSource;
-import com.vaadin.server.data.DataSource;
-import com.vaadin.server.data.ListDataSource;
-import com.vaadin.server.data.Query;
+import com.vaadin.data.HasDataProvider;
+import com.vaadin.data.provider.DataProvider;
+import com.vaadin.data.provider.ListDataProvider;
+import com.vaadin.data.provider.Query;
 import com.vaadin.ui.AbstractListing.AbstractListingExtension;
+import com.vaadin.ui.declarative.DesignContext;
 
 import elemental.json.JsonObject;
 
 public class AbstractListingTest {
 
-    private final class TestListing extends AbstractSingleSelect<String> {
+    private final class TestListing extends AbstractSingleSelect<String>
+            implements HasDataProvider<String> {
 
         /**
          * Used to execute data generation
          */
         public void runDataGeneration() {
             super.getDataCommunicator().beforeClientResponse(true);
+        }
+
+        @Override
+        protected Element writeItem(Element design, String item,
+                DesignContext context) {
+            return null;
+        }
+
+        @Override
+        protected void readItems(Element design, DesignContext context) {
+        }
+
+        @Override
+        public DataProvider<String, ?> getDataProvider() {
+            return internalGetDataProvider();
+        }
+
+        @Override
+        public void setDataProvider(DataProvider<String, ?> dataProvider) {
+            internalSetDataProvider(dataProvider);
         }
     }
 
@@ -66,38 +89,41 @@ public class AbstractListingTest {
     public void testSetItemsWithCollection() {
         listing.setItems(items);
         List<String> list = new LinkedList<>(items);
-        listing.getDataSource().fetch(new Query()).forEach(
-                str -> Assert.assertTrue("Unexpected item in data source",
+        listing.getDataProvider().fetch(new Query()).forEach(
+                str -> Assert.assertTrue("Unexpected item in data provider",
                         list.remove(str)));
-        Assert.assertTrue("Not all items from list were in data source",
+        Assert.assertTrue("Not all items from list were in data provider",
                 list.isEmpty());
     }
 
     @Test
     public void testSetItemsWithVarargs() {
         listing.setItems(ITEM_ARRAY);
-        listing.getDataSource().fetch(new Query()).forEach(
-                str -> Assert.assertTrue("Unexpected item in data source",
+        listing.getDataProvider().fetch(new Query()).forEach(
+                str -> Assert.assertTrue("Unexpected item in data provider",
                         items.remove(str)));
-        Assert.assertTrue("Not all items from list were in data source",
+        Assert.assertTrue("Not all items from list were in data provider",
                 items.isEmpty());
     }
 
     @Test
-    public void testSetDataSource() {
-        ListDataSource<String> dataSource = DataSource.create(items);
-        listing.setDataSource(dataSource);
-        Assert.assertEquals("setDataSource did not set data source", dataSource,
-                listing.getDataSource());
-        listing.setDataSource(new BackEndDataSource<>(q -> Stream.of(ITEM_ARRAY)
-                .skip(q.getOffset()).limit(q.getLimit()),
-                q -> ITEM_ARRAY.length));
-        Assert.assertNotEquals("setDataSource did not replace data source",
-                dataSource, listing.getDataSource());
+    public void testSetDataProvider() {
+        ListDataProvider<String> dataProvider = DataProvider
+                .ofCollection(items);
+        listing.setDataProvider(dataProvider);
+        Assert.assertEquals("setDataProvider did not set data provider",
+                dataProvider, listing.getDataProvider());
+        listing.setDataProvider(
+                DataProvider.fromCallbacks(
+                        query -> Stream.of(ITEM_ARRAY).skip(query.getOffset())
+                                .limit(query.getLimit()),
+                        query -> ITEM_ARRAY.length));
+        Assert.assertNotEquals("setDataProvider did not replace data provider",
+                dataProvider, listing.getDataProvider());
     }
 
     @Test
-    public void testAddDataGeneratorBeforeDataSource() {
+    public void testAddDataGeneratorBeforeDataProvider() {
         CountGenerator generator = new CountGenerator();
         generator.extend(listing);
         listing.setItems("Foo");
@@ -107,7 +133,7 @@ public class AbstractListingTest {
     }
 
     @Test
-    public void testAddDataGeneratorAfterDataSource() {
+    public void testAddDataGeneratorAfterDataProvider() {
         CountGenerator generator = new CountGenerator();
         listing.setItems("Foo");
         generator.extend(listing);

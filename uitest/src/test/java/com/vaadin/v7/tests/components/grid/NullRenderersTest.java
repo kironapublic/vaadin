@@ -19,11 +19,9 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.vaadin.testbench.elements.LabelElement;
+import com.vaadin.testbench.elements.GridElement;
 import com.vaadin.testbench.parallel.TestCategory;
 import com.vaadin.tests.tb3.MultiBrowserTest;
-import com.vaadin.testbench.customelements.GridElement;
-import com.vaadin.v7.tests.components.grid.CustomRenderer;
 
 @TestCategory("grid")
 public class NullRenderersTest extends MultiBrowserTest {
@@ -59,7 +57,4 @@ public class NullRenderersTest extends MultiBrowserTest {
         return $(GridElement.class).id("test-grid");
     }
 
-    private LabelElement findDebugLabel() {
-        return $(LabelElement.class).id(CustomRenderer.DEBUG_LABEL_ID);
-    }
 }

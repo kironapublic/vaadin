@@ -42,19 +42,16 @@ public abstract class AbstractListingFocusBlurTest<T extends AbstractListing<Int
             valueType = ((ParameterizedType) valueType).getRawType();
         }
         if (valueType instanceof Class<?>) {
-            Class<?> clazz = (Class<?>) valueType;
+            Class<T> clazz = (Class<T>) valueType;
             try {
-                AbstractListing<Integer> select = (AbstractListing<Integer>) clazz
-                        .newInstance();
+                T select = clazz.newInstance();
                 select.setItems(
                         IntStream.range(1, 10).mapToObj(Integer::valueOf)
                                 .collect(Collectors.toList()));
 
                 addComponent(select);
-                ((FocusNotifier) select)
-                        .addFocusListener(event -> log("Focus Event"));
-                ((BlurNotifier) select)
-                        .addBlurListener(event -> log("Blur Event"));
+                select.addFocusListener(event -> log("Focus Event"));
+                select.addBlurListener(event -> log("Blur Event"));
             } catch (InstantiationException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }

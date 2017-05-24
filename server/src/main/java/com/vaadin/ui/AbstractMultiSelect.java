@@ -15,30 +15,36 @@
  */
 package com.vaadin.ui;
 
-import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import org.jsoup.nodes.Element;
 
 import com.vaadin.data.HasValue;
 import com.vaadin.data.SelectionModel;
 import com.vaadin.data.SelectionModel.Multi;
+import com.vaadin.data.provider.DataGenerator;
+import com.vaadin.data.provider.DataProvider;
 import com.vaadin.event.selection.MultiSelectionEvent;
 import com.vaadin.event.selection.MultiSelectionListener;
 import com.vaadin.server.Resource;
 import com.vaadin.server.ResourceReference;
+import com.vaadin.server.SerializableConsumer;
 import com.vaadin.server.SerializablePredicate;
-import com.vaadin.server.data.DataGenerator;
-import com.vaadin.shared.AbstractFieldState;
 import com.vaadin.shared.Registration;
 import com.vaadin.shared.data.selection.MultiSelectServerRpc;
 import com.vaadin.shared.ui.ListingJsonConstants;
-import com.vaadin.util.ReflectTools;
+import com.vaadin.shared.ui.abstractmultiselect.AbstractMultiSelectState;
+import com.vaadin.ui.declarative.DesignContext;
+import com.vaadin.ui.declarative.DesignException;
 
 import elemental.json.JsonObject;
 
@@ -55,7 +61,7 @@ import elemental.json.JsonObject;
 public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
         implements MultiSelect<T> {
 
-    private Set<T> selection = new LinkedHashSet<>();
+    private List<T> selection = new ArrayList<>();
 
     private class MultiSelectServerRpcImpl implements MultiSelectServerRpc {
         @Override
@@ -113,23 +119,17 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
         @Override
         public void destroyData(T data) {
         }
+
+        @Override
+        public void destroyAllData() {
+            AbstractMultiSelect.this.deselectAll();
+        }
+
+        @Override
+        public void refreshData(T item) {
+            refreshSelectedItem(item);
+        }
     }
-
-    @Deprecated
-    private static final Method SELECTION_CHANGE_METHOD = ReflectTools
-            .findMethod(MultiSelectionListener.class, "accept",
-                    MultiSelectionEvent.class);
-
-    /**
-     * The item icon caption provider.
-     */
-    private ItemCaptionGenerator<T> itemCaptionGenerator = String::valueOf;
-
-    /**
-     * The item icon provider. It is up to the implementing class to support
-     * this or not.
-     */
-    private IconGenerator<T> itemIconGenerator = item -> null;
 
     /**
      * The item enabled status provider. It is up to the implementing class to
@@ -138,7 +138,7 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
     private SerializablePredicate<T> itemEnabledProvider = item -> true;
 
     /**
-     * Creates a new multi select with an empty data source.
+     * Creates a new multi select with an empty data provider.
      */
     protected AbstractMultiSelect() {
         registerRpc(new MultiSelectServerRpcImpl());
@@ -159,35 +159,19 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
     @Override
     public Registration addSelectionListener(
             MultiSelectionListener<T> listener) {
-        addListener(MultiSelectionEvent.class, listener,
-                SELECTION_CHANGE_METHOD);
-        return () -> removeListener(MultiSelectionEvent.class, listener);
+        return addListener(MultiSelectionEvent.class, listener,
+                MultiSelectionListener.SELECTION_CHANGE_METHOD);
     }
 
-    /**
-     * Gets the item caption generator that is used to produce the strings shown
-     * in the select for each item.
-     *
-     * @return the item caption generator used, not {@code null}
-     * @see #setItemCaptionGenerator(ItemCaptionGenerator)
-     */
+    @Override
     public ItemCaptionGenerator<T> getItemCaptionGenerator() {
-        return itemCaptionGenerator;
+        return super.getItemCaptionGenerator();
     }
 
-    /**
-     * Sets the item caption generator that is used to produce the strings shown
-     * in the select for each item. By default, {@link String#valueOf(Object)}
-     * is used.
-     *
-     * @param itemCaptionGenerator
-     *            the item caption generator to use, not {@code null}
-     */
+    @Override
     public void setItemCaptionGenerator(
             ItemCaptionGenerator<T> itemCaptionGenerator) {
-        Objects.requireNonNull(itemCaptionGenerator);
-        this.itemCaptionGenerator = itemCaptionGenerator;
-        getDataCommunicator().reset();
+        super.setItemCaptionGenerator(itemCaptionGenerator);
     }
 
     /**
@@ -232,11 +216,6 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
         updateSelection(copy, new LinkedHashSet<>(getSelectedItems()));
     }
 
-    @Override
-    public Set<T> getEmptyValue() {
-        return Collections.emptySet();
-    }
-
     /**
      * Adds a value change listener. The listener is called when the selection
      * set of this multi select is changed either by the user or
@@ -251,42 +230,9 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
     @Override
     public Registration addValueChangeListener(
             HasValue.ValueChangeListener<Set<T>> listener) {
-        return addSelectionListener(event -> listener.accept(
-                new ValueChangeEvent<>(this, event.isUserOriginated())));
-    }
-
-    /**
-     * Returns the item icon generator for this multiselect.
-     * <p>
-     * <em>Implementation note:</em> Override this method and
-     * {@link #setItemIconGenerator(IconGenerator)} as {@code public} and invoke
-     * {@code super} methods to support this feature in the multiselect
-     * component.
-     *
-     * @return the item icon generator, not {@code null}
-     * @see #setItemIconGenerator(IconGenerator)
-     */
-    protected IconGenerator<T> getItemIconGenerator() {
-        return itemIconGenerator;
-    }
-
-    /**
-     * Sets the item icon generator for this multiselect. The icon generator is
-     * queried for each item to optionally display an icon next to the item
-     * caption. If the generator returns null for an item, no icon is displayed.
-     * The default provider always returns null (no icons).
-     * <p>
-     * <em>Implementation note:</em> Override this method and
-     * {@link #getItemIconGenerator()} as {@code public} and invoke
-     * {@code super} methods to support this feature in the multiselect
-     * component.
-     *
-     * @param itemIconGenerator
-     *            the item icon generator to set, not {@code null}
-     */
-    protected void setItemIconGenerator(IconGenerator<T> itemIconGenerator) {
-        Objects.requireNonNull(itemIconGenerator);
-        this.itemIconGenerator = itemIconGenerator;
+        return addSelectionListener(
+                event -> listener.valueChange(new ValueChangeEvent<>(this,
+                        event.getOldValue(), event.isUserOriginated())));
     }
 
     /**
@@ -298,7 +244,7 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
      * multiselect component.
      *
      * @return the item enabled provider, not {@code null}
-     * @see #setItemEnabledProvider(Predicate)
+     * @see #setItemEnabledProvider(SerializablePredicate)
      */
     protected SerializablePredicate<T> getItemEnabledProvider() {
         return itemEnabledProvider;
@@ -336,13 +282,13 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
     }
 
     @Override
-    protected AbstractFieldState getState() {
-        return (AbstractFieldState) super.getState();
+    protected AbstractMultiSelectState getState() {
+        return (AbstractMultiSelectState) super.getState();
     }
 
     @Override
-    protected AbstractFieldState getState(boolean markAsDirty) {
-        return (AbstractFieldState) super.getState(markAsDirty);
+    protected AbstractMultiSelectState getState(boolean markAsDirty) {
+        return (AbstractMultiSelectState) super.getState(markAsDirty);
     }
 
     @Override
@@ -402,12 +348,15 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
             return;
         }
 
-        updateSelection(Set::clear, false);
+        updateSelection(Collection::clear, false);
     }
 
     @Override
     public boolean isSelected(T item) {
-        return selection.contains(item);
+        DataProvider<T, ?> dataProvider = internalGetDataProvider();
+        Object id = dataProvider.getId(item);
+        return selection.stream().map(dataProvider::getId).anyMatch(id::equals);
+
     }
 
     /**
@@ -462,7 +411,70 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
         updateSelection(set -> set.add(item), userOriginated);
     }
 
-    private void updateSelection(Consumer<Set<T>> handler,
+    @Override
+    protected Collection<String> getCustomAttributes() {
+        Collection<String> attributes = super.getCustomAttributes();
+        // "value" is not an attribute for the component. "selected" attribute
+        // is used in "option"'s tag to mark selection which implies value for
+        // multiselect component
+        attributes.add("value");
+        return attributes;
+    }
+
+    @Override
+    protected Element writeItem(Element design, T item, DesignContext context) {
+        Element element = super.writeItem(design, item, context);
+
+        if (isSelected(item)) {
+            element.attr("selected", "");
+        }
+
+        return element;
+    }
+
+    @Override
+    protected void readItems(Element design, DesignContext context) {
+        Set<T> selected = new HashSet<>();
+        List<T> items = design.children().stream()
+                .map(child -> readItem(child, selected, context))
+                .collect(Collectors.toList());
+        deselectAll();
+        if (!items.isEmpty()) {
+            setItems(items);
+        }
+        selected.forEach(this::select);
+    }
+
+    /**
+     * Reads an Item from a design and inserts it into the data source.
+     * Hierarchical select components should override this method to recursively
+     * recursively read any child items as well.
+     *
+     * @param child
+     *            a child element representing the item
+     * @param selected
+     *            A set accumulating selected items. If the item that is read is
+     *            marked as selected, its item id should be added to this set.
+     * @param context
+     *            the DesignContext instance used in parsing
+     * @return the item id of the new item
+     *
+     * @throws DesignException
+     *             if the tag name of the {@code child} element is not
+     *             {@code option}.
+     */
+    protected T readItem(Element child, Set<T> selected,
+            DesignContext context) {
+        T item = readItem(child, context);
+
+        if (child.hasAttr("selected")) {
+            selected.add(item);
+        }
+
+        return item;
+    }
+
+    private void updateSelection(SerializableConsumer<Collection<T>> handler,
             boolean userOriginated) {
         LinkedHashSet<T> oldSelection = new LinkedHashSet<>(selection);
         handler.accept(selection);
@@ -471,5 +483,16 @@ public abstract class AbstractMultiSelect<T> extends AbstractListing<T>
                 oldSelection, userOriginated));
 
         getDataCommunicator().reset();
+    }
+
+    private final void refreshSelectedItem(T item) {
+        DataProvider<T, ?> dataProvider = internalGetDataProvider();
+        Object id = dataProvider.getId(item);
+        for (int i = 0; i < selection.size(); ++i) {
+            if (id.equals(dataProvider.getId(selection.get(i)))) {
+                selection.set(i, item);
+                return;
+            }
+        }
     }
 }

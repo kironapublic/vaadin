@@ -20,6 +20,7 @@ import java.util.Objects;
 import com.vaadin.server.AbstractClientConnector;
 import com.vaadin.server.AbstractExtension;
 import com.vaadin.server.JsonCodec;
+import com.vaadin.shared.ui.grid.renderers.AbstractRendererState;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.Column;
 import com.vaadin.ui.renderers.ClickableRenderer.RendererClickEvent;
@@ -39,6 +40,7 @@ import elemental.json.JsonValue;
  *            the grid type this renderer can be attached to
  * @param <V>
  *            the type this renderer knows how to present
+ * @since 8.0
  */
 public abstract class AbstractRenderer<T, V> extends AbstractExtension
         implements Renderer<V> {
@@ -148,7 +150,8 @@ public abstract class AbstractRenderer<T, V> extends AbstractExtension
      * indicating the source grid of possible events emitted by this renderer,
      * such as {@link RendererClickEvent}s.
      *
-     * @return the grid this renderer is attached to or null if unattached
+     * @return the grid this renderer is attached to or {@code null} if
+     *         unattached
      */
     @SuppressWarnings("unchecked")
     protected Grid<T> getParentGrid() {
@@ -156,5 +159,20 @@ public abstract class AbstractRenderer<T, V> extends AbstractExtension
             return null;
         }
         return (Grid<T>) super.getParent().getParent();
+    }
+
+    @Override
+    public Column<T, V> getParent() {
+        return (Column<T, V>) super.getParent();
+    }
+
+    @Override
+    protected AbstractRendererState getState() {
+        return (AbstractRendererState) super.getState();
+    }
+
+    @Override
+    protected AbstractRendererState getState(boolean markAsDirty) {
+        return (AbstractRendererState) super.getState(markAsDirty);
     }
 }

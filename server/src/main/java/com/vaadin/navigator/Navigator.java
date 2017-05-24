@@ -15,22 +15,6 @@
  */
 package com.vaadin.navigator;
 
-/*
- * Copyright 2000-2016 Vaadin Ltd.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -39,8 +23,7 @@ import java.util.List;
 
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
 import com.vaadin.server.Page;
-import com.vaadin.server.Page.UriFragmentChangedEvent;
-import com.vaadin.server.Page.UriFragmentChangedListener;
+import com.vaadin.shared.Registration;
 import com.vaadin.shared.util.SharedUtil;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.ComponentContainer;
@@ -100,10 +83,10 @@ public class Navigator implements Serializable {
      * This class is mostly for internal use by Navigator, and is only public
      * and static to enable testing.
      */
-    public static class UriFragmentManager
-            implements NavigationStateManager, UriFragmentChangedListener {
+    public static class UriFragmentManager implements NavigationStateManager {
         private final Page page;
         private Navigator navigator;
+        private Registration uriFragmentRegistration;
 
         /**
          * Creates a new URIFragmentManager and attach it to listen to URI
@@ -119,9 +102,10 @@ public class Navigator implements Serializable {
         @Override
         public void setNavigator(Navigator navigator) {
             if (this.navigator == null && navigator != null) {
-                page.addUriFragmentChangedListener(this);
+                uriFragmentRegistration = page.addUriFragmentChangedListener(
+                        event -> navigator.navigateTo(getState()));
             } else if (this.navigator != null && navigator == null) {
-                page.removeUriFragmentChangedListener(this);
+                uriFragmentRegistration.remove();
             }
             this.navigator = navigator;
         }
@@ -139,11 +123,6 @@ public class Navigator implements Serializable {
         @Override
         public void setState(String state) {
             setFragment("!" + state);
-        }
-
-        @Override
-        public void uriFragmentChanged(UriFragmentChangedEvent event) {
-            navigator.navigateTo(getState());
         }
 
         /**
@@ -345,7 +324,7 @@ public class Navigator implements Serializable {
                     throw new RuntimeException(e);
                 }
                 // TODO error handling
-                
+
             }
             return null;
         }
@@ -369,9 +348,28 @@ public class Navigator implements Serializable {
         }
     }
 
-    private UI ui;
-    private NavigationStateManager stateManager;
-    private ViewDisplay display;
+    /**
+     * The {@link UI} bound with the Navigator.
+     *
+     * @since 8.0.3
+     */
+    protected UI ui;
+
+    /**
+     * The {@link NavigationStateManager} that is used to get, listen to and
+     * manipulate the navigation state used by the Navigator.
+     *
+     * @since 8.0.3
+     */
+    protected NavigationStateManager stateManager;
+
+    /**
+     * The {@link ViewDisplay} used by the Navigator.
+     *
+     * @since 8.0.3
+     */
+    protected ViewDisplay display;
+
     private View currentView = null;
     private List<ViewChangeListener> listeners = new LinkedList<>();
     private List<ViewProvider> providers = new LinkedList<>();
@@ -511,6 +509,10 @@ public class Navigator implements Serializable {
         this.ui.setNavigator(this);
         if (stateManager == null) {
             stateManager = new UriFragmentManager(ui.getPage());
+        }
+        if (stateManager != null && this.stateManager != null
+                && stateManager != this.stateManager) {
+            this.stateManager.setNavigator(null);
         }
         this.stateManager = stateManager;
         this.stateManager.setNavigator(this);
@@ -974,9 +976,11 @@ public class Navigator implements Serializable {
      *
      * @param listener
      *            Listener to invoke during a view change.
+     * @since 8.0
      */
-    public void addViewChangeListener(ViewChangeListener listener) {
+    public Registration addViewChangeListener(ViewChangeListener listener) {
         listeners.add(listener);
+        return () -> listeners.remove(listener);
     }
 
     /**
@@ -984,7 +988,11 @@ public class Navigator implements Serializable {
      *
      * @param listener
      *            Listener to remove.
+     * @deprecated use a {@link Registration} object returned by
+     *             {@link #addViewChangeListener(ViewChangeListener)} to remove
+     *             a listener
      */
+    @Deprecated
     public void removeViewChangeListener(ViewChangeListener listener) {
         listeners.remove(listener);
     }
@@ -995,8 +1003,10 @@ public class Navigator implements Serializable {
      * @param state
      *            state string
      * @return suitable provider
+     *
+     * @since 8.0.3
      */
-    private ViewProvider getViewProvider(String state) {
+    protected ViewProvider getViewProvider(String state) {
         String longestViewName = null;
         ViewProvider longestViewNameProvider = null;
         for (ViewProvider provider : providers) {
@@ -1015,7 +1025,6 @@ public class Navigator implements Serializable {
      * {@code parameters}.
      *
      * @since 7.6.7
-     * @return view change event
      */
     public void destroy() {
         stateManager.setNavigator(null);

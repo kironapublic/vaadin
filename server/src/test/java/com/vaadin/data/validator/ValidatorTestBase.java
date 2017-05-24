@@ -7,7 +7,7 @@ import org.junit.Before;
 
 import com.vaadin.data.ValidationResult;
 import com.vaadin.data.Validator;
-import com.vaadin.data.util.converter.ValueContext;
+import com.vaadin.data.ValueContext;
 import com.vaadin.ui.Label;
 
 public class ValidatorTestBase {
@@ -17,6 +17,7 @@ public class ValidatorTestBase {
     @Before
     public void setUp() {
         localeContext = new Label();
+        setLocale(Locale.US);
     }
 
     protected <T> void assertPasses(T value, Validator<? super T> validator) {

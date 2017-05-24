@@ -22,7 +22,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.data.Binder.Binding;
-import com.vaadin.data.util.converter.StringToIntegerConverter;
+import com.vaadin.data.Binder.BindingBuilder;
+import com.vaadin.data.converter.StringToIntegerConverter;
 import com.vaadin.tests.data.bean.Person;
 
 /**
@@ -45,7 +46,7 @@ public class BinderStatusChangeTest
     public void bindBinding_unbound_eventWhenBoundEndnoEventsBeforeBound() {
         binder.addStatusChangeListener(this::statusChanged);
 
-        Binding<Person, String, String> binding = binder.forField(nameField);
+        BindingBuilder<Person, String> binding = binder.forField(nameField);
 
         nameField.setValue("");
         Assert.assertNull(event.get());
@@ -143,7 +144,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void load_hasBindings_singleEventOnLoad() {
+    public void readBean_hasBindings_singleEventOnLoad() {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.addStatusChangeListener(this::statusChanged);
@@ -153,7 +154,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void load_hasSeveralBindings_singleEventOnLoad() {
+    public void readBean_hasSeveralBindings_singleEventOnLoad() {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.forField(ageField)
@@ -166,7 +167,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void load_hasNoBindings_singleEvent() {
+    public void readBean_hasNoBindings_singleEvent() {
         binder.addStatusChangeListener(this::statusChanged);
         Assert.assertNull(event.get());
         binder.readBean(item);
@@ -174,7 +175,8 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void save_hasNoBindings_singleEvent() throws ValidationException {
+    public void writeBean_hasNoBindings_singleEvent()
+            throws ValidationException {
         binder.addStatusChangeListener(this::statusChanged);
         Assert.assertNull(event.get());
         binder.writeBean(item);
@@ -182,7 +184,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveIfValid_hasNoBindings_singleEvent() {
+    public void writeBeanIfValid_hasNoBindings_singleEvent() {
         binder.addStatusChangeListener(this::statusChanged);
         Assert.assertNull(event.get());
         binder.writeBeanIfValid(item);
@@ -190,7 +192,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void save_hasBindings_singleEvent() throws ValidationException {
+    public void writeBean_hasBindings_singleEvent() throws ValidationException {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.readBean(item);
@@ -202,7 +204,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void save_hasSeveralBindings_singleEvent()
+    public void writeBean_hasSeveralBindings_singleEvent()
             throws ValidationException {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
@@ -218,7 +220,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveIfValid_hasBindings_singleEvent() {
+    public void writeBeanIfValid_hasBindings_singleEvent() {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.readBean(item);
@@ -230,7 +232,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveIfValid_hasSeveralBindings_singleEvent() {
+    public void writeBeanIfValid_hasSeveralBindings_singleEvent() {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.forField(ageField)
@@ -245,7 +247,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveInvalidValue_hasBindings_singleEvent() {
+    public void writeBeanInvalidValue_hasBindings_singleEvent() {
         binder.forField(nameField).withValidator(name -> false, "")
                 .bind(Person::getFirstName, Person::setFirstName);
         binder.readBean(item);
@@ -260,7 +262,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveIfValid_invalidValueAndBinderHasBindings_singleEvent() {
+    public void writeBeanIfValid_invalidValueAndBinderHasBindings_singleEvent() {
         binder.forField(nameField).withValidator(name -> false, "")
                 .bind(Person::getFirstName, Person::setFirstName);
         binder.readBean(item);
@@ -272,7 +274,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveIfValid_invalidValueAndBinderHasSeveralBindings_singleEvent() {
+    public void writeBeanIfValid_invalidValueAndBinderHasSeveralBindings_singleEvent() {
         binder.forField(nameField).withValidator(name -> false, "")
                 .bind(Person::getFirstName, Person::setFirstName);
         binder.forField(ageField)
@@ -287,7 +289,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveInvalidBean_hasBindings_singleEvent() {
+    public void writeBeanInvalidBean_hasBindings_singleEvent() {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.readBean(item);
@@ -303,7 +305,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveIfValid_invalidBeanAndBinderHasBindings_singleEvent() {
+    public void writeBeanIfValid_invalidBeanAndBinderHasBindings_singleEvent() {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.readBean(item);
@@ -316,7 +318,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveValidBean_hasBindings_singleEvent()
+    public void writeValidBean_hasBindings_singleEvent()
             throws ValidationException {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
@@ -330,7 +332,7 @@ public class BinderStatusChangeTest
     }
 
     @Test
-    public void saveIfValid_validBeanAndBinderHasBindings_singleEvent() {
+    public void writeBeanIfValid_validBeanAndBinderHasBindings_singleEvent() {
         binder.forField(nameField).bind(Person::getFirstName,
                 Person::setFirstName);
         binder.readBean(item);
@@ -376,8 +378,8 @@ public class BinderStatusChangeTest
 
     @Test
     public void validateBinding_noValidationErrors_statusEventWithoutErrors() {
-        Binding<Person, String, String> binding = binder.forField(nameField);
-        binding.bind(Person::getFirstName, Person::setFirstName);
+        Binding<Person, String> binding = binder.forField(nameField)
+                .bind(Person::getFirstName, Person::setFirstName);
         binder.forField(ageField)
                 .withConverter(new StringToIntegerConverter(""))
                 .bind(Person::getAge, Person::setAge);
@@ -392,9 +394,9 @@ public class BinderStatusChangeTest
 
     @Test
     public void validateBinding_validationErrors_statusEventWithError() {
-        Binding<Person, String, String> binding = binder.forField(nameField)
-                .withValidator(name -> false, "");
-        binding.bind(Person::getFirstName, Person::setFirstName);
+        Binding<Person, String> binding = binder.forField(nameField)
+                .withValidator(name -> false, "")
+                .bind(Person::getFirstName, Person::setFirstName);
         binder.forField(ageField)
                 .withConverter(new StringToIntegerConverter(""))
                 .bind(Person::getAge, Person::setAge);

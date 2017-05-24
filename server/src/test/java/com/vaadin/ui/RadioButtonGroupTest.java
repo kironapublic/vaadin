@@ -24,7 +24,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.data.SelectionModel.Multi;
-import com.vaadin.server.data.DataSource;
+import com.vaadin.data.provider.DataProvider;
+import com.vaadin.server.ServerRpcManager;
 import com.vaadin.shared.data.selection.SelectionServerRpc;
 
 public class RadioButtonGroupTest {
@@ -34,8 +35,8 @@ public class RadioButtonGroupTest {
     public void setUp() {
         radioButtonGroup = new RadioButtonGroup<>();
         // Intentional deviation from upcoming selection order
-        radioButtonGroup
-                .setDataSource(DataSource.create("Third", "Second", "First"));
+        radioButtonGroup.setDataProvider(
+                DataProvider.ofItems("Third", "Second", "First"));
     }
 
     @Test
@@ -47,11 +48,11 @@ public class RadioButtonGroupTest {
             Assert.assertFalse(event.isUserOriginated());
         });
 
-        radioButtonGroup.select("First");
-        radioButtonGroup.select("Second");
+        radioButtonGroup.setValue("First");
+        radioButtonGroup.setValue("Second");
 
-        radioButtonGroup.deselect("Second");
-        radioButtonGroup.deselect("Second");
+        radioButtonGroup.setValue(null);
+        radioButtonGroup.setValue(null);
 
         Assert.assertEquals(3, listenerCount.get());
     }
@@ -65,7 +66,7 @@ public class RadioButtonGroupTest {
             Assert.assertTrue(event.isUserOriginated());
         });
 
-        SelectionServerRpc rpc = ComponentTest.getRpcProxy(radioButtonGroup,
+        SelectionServerRpc rpc = ServerRpcManager.getRpcProxy(radioButtonGroup,
                 SelectionServerRpc.class);
 
         rpc.select(getItemKey("First"));

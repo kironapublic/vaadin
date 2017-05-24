@@ -101,7 +101,7 @@ import elemental.json.JsonValue;
 
 /**
  * Connects the client side {@link Grid} widget with the server side
- * {@link com.vaadin.ui.components.grid.Grid} component.
+ * <code>Grid</code> component.
  * <p>
  * The Grid is typed to JSONObject. The structure of the JSONObject is described
  * at {@link com.vaadin.shared.data.DataProviderRpc#setRowData(int, List)
@@ -153,7 +153,7 @@ public class GridConnector extends AbstractHasComponentsConnector
     }
 
     /**
-     * Custom implementation of the custom grid column using a JSONObject to
+     * Custom implementation of the custom grid column using a JSONObject to
      * represent the cell value and String as a column type.
      */
     private class CustomGridColumn extends Grid.Column<Object, JsonObject> {
@@ -389,7 +389,7 @@ public class GridConnector extends AbstractHasComponentsConnector
             } else {
                 Collection<Column<?, JsonObject>> errorColumns;
                 if (errorColumnsIds != null) {
-                    errorColumns = new ArrayList<Grid.Column<?, JsonObject>>();
+                    errorColumns = new ArrayList<Column<?, JsonObject>>();
                     for (String colId : errorColumnsIds) {
                         errorColumns.add(columnIdToColumn.get(colId));
                     }
@@ -837,6 +837,11 @@ public class GridConnector extends AbstractHasComponentsConnector
             if (orderNeedsUpdate(getState().columnOrder)) {
                 updateColumnOrderFromState(getState().columnOrder);
             }
+        }
+
+        // Column resize mode
+        if (stateChangeEvent.hasPropertyChanged("columnResizeMode")) {
+            getWidget().setColumnResizeMode(getState().columnResizeMode);
         }
 
         // Header and footer

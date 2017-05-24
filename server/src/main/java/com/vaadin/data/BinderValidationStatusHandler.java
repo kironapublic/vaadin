@@ -15,16 +15,14 @@
  */
 package com.vaadin.data;
 
-import java.io.Serializable;
-import java.util.function.Consumer;
-
+import com.vaadin.event.SerializableEventListener;
 import com.vaadin.ui.AbstractComponent;
 
 /**
  * Handler for {@link BinderValidationStatus} changes.
  * <p>
- * {{@link Binder#setValidationStatusHandler(BinderStatusHandler) Register} an instance of
- * this class to be able to customize validation status handling.
+ * {@link Binder#setValidationStatusHandler(BinderValidationStatusHandler) Register} an
+ * instance of this class to be able to customize validation status handling.
  * <p>
  * The default handler will show
  * {@link AbstractComponent#setComponentError(com.vaadin.server.ErrorMessage) an
@@ -37,11 +35,23 @@ import com.vaadin.ui.AbstractComponent;
  *
  * @see BinderValidationStatus
  * @see Binder#validate()
- * @see ValidationStatus
+ * @see BindingValidationStatus
+ *
+ * @param <BEAN>
+ *            the bean type of binder
  *
  * @since 8.0
  */
-public interface BinderValidationStatusHandler
-        extends Consumer<BinderValidationStatus<?>>, Serializable {
+@FunctionalInterface
+public interface BinderValidationStatusHandler<BEAN>
+        extends SerializableEventListener {
+
+    /**
+     * Invoked when the validation status has changed in binder.
+     *
+     * @param statusChange
+     *            the changed status
+     */
+    void statusChange(BinderValidationStatus<BEAN> statusChange);
 
 }

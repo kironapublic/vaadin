@@ -7,7 +7,7 @@ import org.junit.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
-import com.vaadin.testbench.customelements.AbstractDateFieldElement;
+import com.vaadin.testbench.elements.AbstractDateFieldElement;
 import com.vaadin.testbench.elements.LabelElement;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
@@ -21,7 +21,7 @@ public class DateFieldDayResolutionOffsetTest extends MultiBrowserTest {
         select2ndOfSeptember();
 
         LabelElement dateValue = $(LabelElement.class).id("dateValue");
-        assertThat(dateValue.getText(), is("09/02/2014"));
+        assertThat(dateValue.getText(), is("09/02/2014 00:00:00"));
     }
 
     private void select2ndOfSeptember() {

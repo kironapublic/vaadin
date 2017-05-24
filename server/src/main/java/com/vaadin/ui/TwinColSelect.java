@@ -18,7 +18,8 @@ package com.vaadin.ui;
 
 import java.util.Collection;
 
-import com.vaadin.server.data.DataSource;
+import com.vaadin.data.HasDataProvider;
+import com.vaadin.data.provider.DataProvider;
 import com.vaadin.shared.ui.twincolselect.TwinColSelectState;
 
 /**
@@ -30,7 +31,8 @@ import com.vaadin.shared.ui.twincolselect.TwinColSelectState;
  * @param <T>
  *            item type
  */
-public class TwinColSelect<T> extends AbstractMultiSelect<T> {
+public class TwinColSelect<T> extends AbstractMultiSelect<T>
+        implements HasDataProvider<T> {
 
     /**
      * Constructs a new TwinColSelect.
@@ -50,16 +52,18 @@ public class TwinColSelect<T> extends AbstractMultiSelect<T> {
     }
 
     /**
-     * Constructs a new TwinColSelect with caption and data source for options.
+     * Constructs a new TwinColSelect with caption and data provider for
+     * options.
      *
      * @param caption
      *            the caption to set, can be {@code null}
-     * @param dataSource
-     *            the data source, not {@code null}
+     * @param dataProvider
+     *            the data provider, not {@code null}
+     * @since 8.0
      */
-    public TwinColSelect(String caption, DataSource<T> dataSource) {
+    public TwinColSelect(String caption, DataProvider<T, ?> dataProvider) {
         this(caption);
-        setDataSource(dataSource);
+        setDataProvider(dataProvider);
     }
 
     /**
@@ -71,7 +75,7 @@ public class TwinColSelect<T> extends AbstractMultiSelect<T> {
      *            the options, cannot be {@code null}
      */
     public TwinColSelect(String caption, Collection<T> options) {
-        this(caption, DataSource.create(options));
+        this(caption, DataProvider.ofCollection(options));
     }
 
     /**
@@ -89,7 +93,7 @@ public class TwinColSelect<T> extends AbstractMultiSelect<T> {
      * the selects.
      * <p>
      * If a height if set (using {@link #setHeight(String)} or
-     * {@link #setHeight(float, int)}) it overrides the number of rows. Leave
+     * {@link #setHeight(float, Unit)}) it overrides the number of rows. Leave
      * the height undefined to use this method.
      *
      * @param rows
@@ -153,6 +157,16 @@ public class TwinColSelect<T> extends AbstractMultiSelect<T> {
     @Override
     protected TwinColSelectState getState(boolean markAsDirty) {
         return (TwinColSelectState) super.getState(markAsDirty);
+    }
+
+    @Override
+    public DataProvider<T, ?> getDataProvider() {
+        return internalGetDataProvider();
+    }
+
+    @Override
+    public void setDataProvider(DataProvider<T, ?> dataProvider) {
+        internalSetDataProvider(dataProvider);
     }
 
 }

@@ -3,13 +3,14 @@ package com.vaadin.tests.components.combobox;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 
 import com.vaadin.testbench.By;
-import com.vaadin.testbench.customelements.ComboBoxElement;
+import com.vaadin.testbench.elements.ComboBoxElement;
 import com.vaadin.testbench.elements.LabelElement;
 import com.vaadin.testbench.parallel.BrowserUtil;
 import com.vaadin.tests.tb3.MultiBrowserTest;
@@ -25,6 +26,31 @@ public class ComboBoxSelectingTest extends MultiBrowserTest {
         openTestURL();
         waitForElementPresent(By.className("v-filterselect"));
         comboBoxElement = $(ComboBoxElement.class).first();
+    }
+
+    @Test
+    public void ensureOldFilterIsCleared() {
+        comboBoxElement.openPopup();
+        int initialVisibleOptions = countVisibleOptions();
+        clearInputAndType("b11");
+        int visibleOptionsAfterFiltering = countVisibleOptions();
+        Assert.assertEquals(1, visibleOptionsAfterFiltering);
+        clickOnLabel();
+        sleep(1000);
+        // no selection was made, clicking on arrow should show all options
+        // again
+        comboBoxElement.openPopup();
+
+        int visibleOptions = countVisibleOptions();
+        Assert.assertEquals(initialVisibleOptions, visibleOptions);
+    }
+
+    private int countVisibleOptions() {
+        return comboBoxElement.getPopupSuggestions().size();
+    }
+
+    private void clickOnLabel() {
+        getDriver().findElement(By.cssSelector(".v-label")).click();
     }
 
     @Test

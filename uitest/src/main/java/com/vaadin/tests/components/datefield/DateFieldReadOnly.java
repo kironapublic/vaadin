@@ -6,10 +6,8 @@ import java.util.Locale;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.tests.components.AbstractReindeerTestUI;
 import com.vaadin.tests.components.TestDateField;
-import com.vaadin.ui.AbstractDateField;
+import com.vaadin.ui.AbstractLocalDateField;
 import com.vaadin.ui.Button;
-import com.vaadin.ui.Button.ClickEvent;
-import com.vaadin.ui.Button.ClickListener;
 
 public class DateFieldReadOnly extends AbstractReindeerTestUI {
 
@@ -25,7 +23,7 @@ public class DateFieldReadOnly extends AbstractReindeerTestUI {
 
     @Override
     protected void setup(VaadinRequest request) {
-        final AbstractDateField timeField = new TestDateField(
+        final AbstractLocalDateField timeField = new TestDateField(
                 "A read-only datefield");
         timeField.setCaption(null);
         timeField.setIcon(null);
@@ -40,13 +38,8 @@ public class DateFieldReadOnly extends AbstractReindeerTestUI {
         addComponent(timeField);
 
         Button b = new Button("Switch read-only");
-        b.addClickListener(new ClickListener() {
-
-            @Override
-            public void buttonClick(ClickEvent event) {
-                timeField.setReadOnly(!timeField.isReadOnly());
-            }
-        });
+        b.addClickListener(
+                event -> timeField.setReadOnly(!timeField.isReadOnly()));
 
         addComponent(b);
     }

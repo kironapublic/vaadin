@@ -47,6 +47,7 @@ import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
 import com.liferay.portal.kernel.util.PropsUtil;
 import com.vaadin.server.communication.PortletDummyRequestHandler;
 import com.vaadin.server.communication.PortletUIInitHandler;
+import com.vaadin.ui.UI;
 import com.vaadin.util.CurrentInstance;
 
 /**
@@ -359,8 +360,7 @@ public class VaadinPortlet extends GenericPortlet
                     Class<?> portletRequestClass = Class.forName(
                             "com.bea.portlet.container.PortletRequestImpl");
                     servletRequestMethod = portletRequestClass
-                            .getDeclaredMethod("getInternalRequest"
-                            );
+                            .getDeclaredMethod("getInternalRequest");
                     servletRequestMethod.setAccessible(true);
                 }
 
@@ -643,12 +643,11 @@ public class VaadinPortlet extends GenericPortlet
 
     /**
      * Gets the currently used Vaadin portlet. The current portlet is
-     * automatically defined when initializing the portlet and when processing
-     * requests to the server and in threads started at a point when the current
-     * portlet is defined (see {@link InheritableThreadLocal}). In other cases,
-     * (e.g. from background threads started in some other way), the current
-     * portlet is not automatically defined.
-     * <p>
+     * automatically defined when processing requests related to the service
+     * (see {@link ThreadLocal}) and in {@link VaadinSession#access(Runnable)}
+     * and {@link UI#access(Runnable)}. In other cases, (e.g. from background
+     * threads, the current service is not automatically defined.
+     *
      * The current portlet is derived from the current service using
      * {@link VaadinService#getCurrent()}
      *

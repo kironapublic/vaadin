@@ -7,7 +7,7 @@ import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinServlet;
 import com.vaadin.server.WebBrowser;
 import com.vaadin.shared.communication.PushMode;
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.ui.ui.Transport;
 import com.vaadin.shared.ui.ui.UIState.PushConfigurationState;
 import com.vaadin.ui.Button;
@@ -29,10 +29,12 @@ public abstract class AbstractTestUI extends UI {
         label.setWidth("100%");
 
         VerticalLayout rootLayout = new VerticalLayout();
-        rootLayout.setMargin(true);
+        rootLayout.setSpacing(false);
         setContent(rootLayout);
 
         layout = new VerticalLayout();
+        layout.setSpacing(false);
+        layout.setMargin(false);
 
         rootLayout.addComponent(label);
         rootLayout.addComponent(layout);

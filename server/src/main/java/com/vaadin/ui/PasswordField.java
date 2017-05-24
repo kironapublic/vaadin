@@ -19,6 +19,7 @@ package com.vaadin.ui;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Element;
 
+import com.vaadin.shared.ui.passwordfield.PasswordFieldState;
 import com.vaadin.ui.declarative.DesignAttributeHandler;
 import com.vaadin.ui.declarative.DesignContext;
 
@@ -41,7 +42,7 @@ public class PasswordField extends TextField {
      * @param caption
      *            the caption for the field
      * @param value
-     *            the value for the field
+     *            the value for the field, not {@code null}
      */
     public PasswordField(String caption, String value) {
         setValue(value);
@@ -59,6 +60,58 @@ public class PasswordField extends TextField {
         setCaption(caption);
     }
 
+    /**
+     * Constructs a new {@code PasswordField} with a value change listener.
+     * <p>
+     * The listener is called when the value of this {@code PasswordField} is
+     * changed either by the user or programmatically.
+     *
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     * @since 8.0
+     */
+    public PasswordField(ValueChangeListener<String> valueChangeListener) {
+        super(valueChangeListener);
+    }
+
+    /**
+     * Constructs a new {@code PasswordField} with the given caption and a value
+     * change listener.
+     * <p>
+     * The listener is called when the value of this {@code PasswordField} is
+     * changed either by the user or programmatically.
+     *
+     * @param caption
+     *            the caption for the field
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     * @since 8.0
+     */
+    public PasswordField(String caption,
+            ValueChangeListener<String> valueChangeListener) {
+        super(caption, valueChangeListener);
+    }
+
+    /**
+     * Constructs a new {@code PasswordField} with the given caption, initial
+     * text contents and a value change listener.
+     * <p>
+     * The listener is called when the value of this {@code PasswordField} is
+     * changed either by the user or programmatically.
+     *
+     * @param caption
+     *            the caption for the field
+     * @param value
+     *            the value for the field, not {@code null}
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     * @since 8.0
+     */
+    public PasswordField(String caption, String value,
+            ValueChangeListener<String> valueChangeListener) {
+        super(caption, value, valueChangeListener);
+    }
+
     @Override
     public void readDesign(Element design, DesignContext designContext) {
         super.readDesign(design, designContext);
@@ -72,10 +125,19 @@ public class PasswordField extends TextField {
     @Override
     public void writeDesign(Element design, DesignContext designContext) {
         super.writeDesign(design, designContext);
-        AbstractTextField def = designContext
-                .getDefaultInstance(this);
+        AbstractTextField def = designContext.getDefaultInstance(this);
         Attributes attr = design.attributes();
         DesignAttributeHandler.writeAttribute("value", attr, getValue(),
                 def.getValue(), String.class, designContext);
+    }
+
+    @Override
+    protected PasswordFieldState getState() {
+        return (PasswordFieldState) super.getState();
+    }
+
+    @Override
+    protected PasswordFieldState getState(boolean markAsDirty) {
+        return (PasswordFieldState) super.getState(markAsDirty);
     }
 }

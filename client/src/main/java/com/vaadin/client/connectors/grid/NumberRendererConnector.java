@@ -16,6 +16,7 @@
 package com.vaadin.client.connectors.grid;
 
 import com.vaadin.shared.ui.Connect;
+import com.vaadin.shared.ui.grid.renderers.NumberRendererState;
 
 /**
  * A connector for {@link com.vaadin.ui.renderers.NumberRenderer
@@ -25,10 +26,14 @@ import com.vaadin.shared.ui.Connect;
  * string, and displayed as-is on the client side. This is to be able to support
  * the server's locale.
  *
- * @since 7.4
+ * @since 8.0
  * @author Vaadin Ltd
  */
 @Connect(com.vaadin.ui.renderers.NumberRenderer.class)
 public class NumberRendererConnector extends TextRendererConnector {
-    // no implementation needed
+
+    @Override
+    public NumberRendererState getState() {
+        return (NumberRendererState) super.getState();
+    }
 }

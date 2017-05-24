@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.vaadin</groupId>
         <artifactId>vaadin-root</artifactId>
-        <version>8.0-SNAPSHOT</version>
+        <version>8.1-SNAPSHOT</version>
     </parent>
     <artifactId>vaadin-compatibility-themes</artifactId>
     <name>vaadin-compatibility-themes</name>
@@ -13,6 +13,11 @@
 
     <url>https://vaadin.com/</url>
     <description>Vaadin compatibility themes</description>
+
+    <properties>
+        <!-- These files are directly from Vaadin 7 -->
+        <sonar.skip>true</sonar.skip>
+    </properties>
 
     <dependencies>
         <!-- Maven plugin scans for vaadin-server... -->
@@ -45,6 +50,15 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.cmpn</artifactId>
         </dependency>
     </dependencies>
 
@@ -218,29 +232,6 @@
                             </arguments>
                         </configuration>
                     </execution>
-                    <execution>
-                        <id>generate-export-package</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <classpathScope>compile</classpathScope>
-                            <executable>${java.home}/bin/java</executable>
-                            <arguments>
-                                <argument>-Dvaadin.version=${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</argument>
-                                <argument>-DincludeNumberPackages=0</argument>
-
-                                <argument>-classpath</argument>
-                                <classpath />
-
-                                <argument>com.vaadin.buildhelpers.GeneratePackageExports</argument>
-
-                                <argument>${project.build.directory}/${project.build.finalName}.${project.packaging}</argument>
-                                <argument>VAADIN/themes</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
                 </executions>
             </plugin>
 
@@ -276,29 +267,9 @@
             </plugin>
 
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-Version>${osgi.bundle.version}</Bundle-Version>
-                        <Bundle-RequiredExecutionEnvironment>${osgi.execution.environment}</Bundle-RequiredExecutionEnvironment>
-                        <!-- Export package is handled in exec plugin -->
-                        <Export-Package></Export-Package>
-                        <Import-Package></Import-Package>
-                    </instructions>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>bundle-manifest</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>manifest</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-maven-plugin</artifactId>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>

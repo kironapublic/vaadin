@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2000-2016 Vaadin Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -20,7 +20,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import com.vaadin.server.LegacyApplication;
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Label;

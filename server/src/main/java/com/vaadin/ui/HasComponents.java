@@ -56,6 +56,7 @@ public interface HasComponents extends Component, Iterable<Component> {
          * @param listener
          *            the listener to add, not null
          * @return a registration object for removing the listener
+         * @since 8.0
          */
         public Registration addComponentAttachListener(
                 ComponentAttachListener listener);
@@ -70,6 +71,7 @@ public interface HasComponents extends Component, Iterable<Component> {
          *             the registration object returned from
          *             {@link #addComponentAttachListener(ComponentAttachListener)}
          *             .
+         * @since 8.0
          */
         @Deprecated
         public void removeComponentAttachListener(
@@ -92,6 +94,7 @@ public interface HasComponents extends Component, Iterable<Component> {
     /**
      * Component attach listener interface.
      */
+    @FunctionalInterface
     public interface ComponentAttachListener extends Serializable {
 
         public static final Method attachMethod = ReflectTools.findMethod(
@@ -110,6 +113,7 @@ public interface HasComponents extends Component, Iterable<Component> {
     /**
      * Component detach listener interface.
      */
+    @FunctionalInterface
     public interface ComponentDetachListener extends Serializable {
 
         public static final Method detachMethod = ReflectTools.findMethod(
@@ -150,8 +154,6 @@ public interface HasComponents extends Component, Iterable<Component> {
         /**
          * Gets the component container.
          *
-         * @param the
-         *            component container.
          */
         public HasComponents getContainer() {
             return (HasComponents) getSource();
@@ -160,8 +162,6 @@ public interface HasComponents extends Component, Iterable<Component> {
         /**
          * Gets the attached component.
          *
-         * @param the
-         *            attach component.
          */
         public Component getAttachedComponent() {
             return component;
@@ -193,8 +193,6 @@ public interface HasComponents extends Component, Iterable<Component> {
         /**
          * Gets the component container.
          *
-         * @param the
-         *            component container.
          */
         public HasComponents getContainer() {
             return (HasComponents) getSource();

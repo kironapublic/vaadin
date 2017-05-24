@@ -24,9 +24,9 @@ import com.google.gwt.event.dom.client.DomEvent;
 import com.google.gwt.event.dom.client.MouseEvent;
 import com.google.gwt.event.shared.EventHandler;
 import com.google.gwt.event.shared.HandlerManager;
+import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Widget;
-import com.google.web.bindery.event.shared.HandlerRegistration;
 import com.vaadin.client.WidgetUtil;
 import com.vaadin.client.widget.escalator.Cell;
 import com.vaadin.client.widget.escalator.RowContainer;
@@ -58,7 +58,7 @@ public abstract class ClickableRenderer<T, W extends Widget>
      * @param <R>
      *            the row type of the containing Grid
      *
-     * @see {@link ButtonRenderer#addClickHandler(RendererClickHandler)}
+     * @see ButtonRenderer#addClickHandler(RendererClickHandler)
      */
     public interface RendererClickHandler<R> extends EventHandler {
 
@@ -161,7 +161,7 @@ public abstract class ClickableRenderer<T, W extends Widget>
         }
 
         private native static Escalator getEscalator(Grid<?> grid)
-        /*-{    
+        /*-{
           return grid.@com.vaadin.client.widgets.Grid::escalator;
         }-*/;
 
@@ -171,16 +171,15 @@ public abstract class ClickableRenderer<T, W extends Widget>
          * <strong>Note:</strong> This method may not work reliably if the grid
          * in question is wrapped in a {@link Composite} <em>unless</em> the
          * element is inside another widget that is a child of the wrapped grid;
-         * please refer to the note in
-         * {@link WidgetUtil#findWidget(Element, Class) Util.findWidget} for
-         * details.
+         * please refer to the note in {@link WidgetUtil#findWidget(Element)
+         * Util.findWidget} for details.
          *
          * @param e
          *            the element whose parent grid to find
          * @return the parent grid or null if none found.
          */
         private static Grid<?> findClosestParentGrid(Element e) {
-            Widget w = WidgetUtil.findWidget(e, null);
+            Widget w = WidgetUtil.findWidget(e);
 
             while (w != null && !(w instanceof Grid)) {
                 w = w.getParent();

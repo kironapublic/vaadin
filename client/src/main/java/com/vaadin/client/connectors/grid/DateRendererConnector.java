@@ -16,6 +16,7 @@
 package com.vaadin.client.connectors.grid;
 
 import com.vaadin.shared.ui.Connect;
+import com.vaadin.shared.ui.grid.renderers.DateRendererState;
 
 /**
  * A connector for {@link com.vaadin.ui.renderers.DateRenderer DateRenderer}.
@@ -24,10 +25,14 @@ import com.vaadin.shared.ui.Connect;
  * string, and displayed as-is on the client side. This is to be able to support
  * the server's locale.
  *
- * @since 7.4
+ * @since 8.0
  * @author Vaadin Ltd
  */
 @Connect(com.vaadin.ui.renderers.DateRenderer.class)
 public class DateRendererConnector extends TextRendererConnector {
-    // No implementation needed
+
+    @Override
+    public DateRendererState getState() {
+        return (DateRendererState) super.getState();
+    }
 }

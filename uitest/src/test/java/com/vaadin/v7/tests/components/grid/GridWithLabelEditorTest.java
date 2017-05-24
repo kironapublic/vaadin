@@ -19,8 +19,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
+import com.vaadin.testbench.elements.GridElement;
 import com.vaadin.tests.tb3.SingleBrowserTest;
-import com.vaadin.testbench.customelements.GridElement;
 
 public class GridWithLabelEditorTest extends SingleBrowserTest {
 

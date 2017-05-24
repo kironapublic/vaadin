@@ -17,15 +17,17 @@ package com.vaadin.ui;
 
 import java.time.LocalDate;
 
+import com.vaadin.shared.ui.datefield.InlineDateFieldState;
+
 /**
  * A date entry component, which displays the actual date selector inline.
  *
- * @see AbstractDateField
+ * @see AbstractLocalDateField
  * @see DateField
  * @author Vaadin Ltd.
  * @since 8.0
  */
-public class InlineDateField extends AbstractDateField {
+public class InlineDateField extends AbstractLocalDateField {
 
     /**
      * Constructs an empty <code>InlineDateField</code> with no caption.
@@ -55,6 +57,68 @@ public class InlineDateField extends AbstractDateField {
      */
     public InlineDateField(String caption) {
         super(caption);
+    }
+
+    /**
+     * Constructs a new {@code InlineDateField} with a value change listener.
+     * <p>
+     * The listener is called when the value of this {@code InlineDateField} is
+     * changed either by the user or programmatically.
+     *
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     */
+    public InlineDateField(ValueChangeListener<LocalDate> valueChangeListener) {
+        super();
+        addValueChangeListener(valueChangeListener);
+    }
+
+    /**
+     * Constructs a new {@code InlineDateField} with the given caption and a
+     * value change listener.
+     * <p>
+     * The listener is called when the value of this {@code InlineDateField} is
+     * changed either by the user or programmatically.
+     *
+     * @param caption
+     *            the caption for the field
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     */
+    public InlineDateField(String caption,
+            ValueChangeListener<LocalDate> valueChangeListener) {
+        this(valueChangeListener);
+        setCaption(caption);
+    }
+
+    /**
+     * Constructs a new {@code InlineDateField} with the given caption, initial
+     * text contents and a value change listener.
+     * <p>
+     * The listener is called when the value of this {@code InlineDateField} is
+     * changed either by the user or programmatically.
+     *
+     * @param caption
+     *            the caption for the field
+     * @param value
+     *            the value for the field, not {@code null}
+     * @param valueChangeListener
+     *            the value change listener, not {@code null}
+     */
+    public InlineDateField(String caption, LocalDate value,
+            ValueChangeListener<LocalDate> valueChangeListener) {
+        this(caption, value);
+        addValueChangeListener(valueChangeListener);
+    }
+
+    @Override
+    protected InlineDateFieldState getState() {
+        return (InlineDateFieldState) super.getState();
+    }
+
+    @Override
+    protected InlineDateFieldState getState(boolean markAsDirty) {
+        return (InlineDateFieldState) super.getState(markAsDirty);
     }
 
 }

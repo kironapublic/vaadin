@@ -24,7 +24,7 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 
-import com.vaadin.testbench.customelements.GridElement;
+import com.vaadin.testbench.elements.GridElement;
 import com.vaadin.v7.tests.components.grid.basicfeatures.GridBasicFeatures;
 import com.vaadin.v7.tests.components.grid.basicfeatures.GridBasicFeaturesTest;
 
@@ -228,5 +228,18 @@ public class GridKeyboardNavigationTest extends GridBasicFeaturesTest {
                         + "), was " + cellContents,
                 column == focusedColumn
                         && Math.abs(row - focusedRow) <= rowTolerance);
+    }
+
+    @Test
+    public void testNavigateOverHiddenColumnToFrozenColumn() {
+        openTestURL();
+        setFrozenColumns(3);
+        toggleColumnHidden(1);
+        getGridElement().getCell(0, 2).click();
+        assertFocusedCell(0, 2);
+        new Actions(getDriver()).sendKeys(Keys.ARROW_LEFT).perform();
+        assertFocusedCell(0, 1);
+        new Actions(getDriver()).sendKeys(Keys.ARROW_LEFT).perform();
+        assertFocusedCell(0, 0);
     }
 }

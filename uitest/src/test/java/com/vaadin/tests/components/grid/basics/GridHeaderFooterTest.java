@@ -138,9 +138,8 @@ public class GridHeaderFooterTest extends GridBasicsTest {
         assertFooterTexts(1, GridBasics.COLUMN_CAPTIONS);
     }
 
-    public void testDynamicallyChangingCellType() throws Exception {
-        openTestURL();
-
+    @Test
+    public void testDynamicallyChangingHeaderCellType() throws Exception {
         selectMenuPath("Component", "Columns", "Column 0", "Header Type",
                 "Widget Header");
         GridCellElement widgetCell = getGridElement().getHeaderCell(0, 0);
@@ -163,8 +162,6 @@ public class GridHeaderFooterTest extends GridBasicsTest {
 
     @Test
     public void testButtonInHeader() throws Exception {
-        openTestURL();
-
         selectMenuPath("Component", "Columns", "Column 1", "Header Type",
                 "Widget Header");
 
@@ -176,7 +173,6 @@ public class GridHeaderFooterTest extends GridBasicsTest {
 
     @Test
     public void testRemoveComponentFromHeader() throws Exception {
-        openTestURL();
         selectMenuPath("Component", "Columns", "Column 1", "Header Type",
                 "Widget Header");
         selectMenuPath("Component", "Columns", "Column 1", "Header Type",
@@ -201,6 +197,187 @@ public class GridHeaderFooterTest extends GridBasicsTest {
 
         getSidebarOpenButton().click();
         assertEquals("Column 1", getColumnHidingToggle(1).getText());
+    }
+
+    @Test
+    public void testDynamicallyChangingFooterCellType() throws Exception {
+        selectMenuPath("Component", "Columns", "Column 0", "Footer Type",
+                "Widget Footer");
+        GridCellElement widgetCell = getGridElement().getFooterCell(0, 0);
+        assertTrue(widgetCell.isElementPresent(By.className("v-button")));
+
+        selectMenuPath("Component", "Columns", "Column 1", "Footer Type",
+                "HTML Footer");
+        GridCellElement htmlCell = getGridElement().getFooterCell(0, 1);
+        assertEquals("<b>HTML Footer</b>",
+                htmlCell.findElement(
+                        By.className("v-grid-column-footer-content"))
+                        .getAttribute("innerHTML"));
+
+        selectMenuPath("Component", "Columns", "Column 2", "Footer Type",
+                "Text Footer");
+        GridCellElement textCell = getGridElement().getFooterCell(0, 2);
+
+        assertEquals("text footer", textCell.getText().toLowerCase());
+    }
+
+    @Test
+    public void testButtonInFooter() throws Exception {
+        selectMenuPath("Component", "Columns", "Column 1", "Footer Type",
+                "Widget Footer");
+
+        getGridElement().findElements(By.className("v-button")).get(0).click();
+
+        assertTrue("Button click should be logged",
+                logContainsText("Button clicked!"));
+    }
+
+    @Test
+    public void testRemoveComponentFromFooter() throws Exception {
+        selectMenuPath("Component", "Columns", "Column 1", "Footer Type",
+                "Widget Footer");
+        selectMenuPath("Component", "Columns", "Column 1", "Footer Type",
+                "Text Footer");
+        assertTrue("No notifications should've been shown",
+                !$(NotificationElement.class).exists());
+        assertEquals("Footer should've been reverted back to text footer",
+                "text footer",
+                getGridElement().getFooterCell(0, 1).getText().toLowerCase());
+    }
+
+    @Test
+    public void testColumnHidingToggleCaption_settingWidgetToFooter_toggleCaptionStays() {
+        toggleColumnHidable(1);
+        getSidebarOpenButton().click();
+        assertEquals("column 1",
+                getGridElement().getHeaderCell(0, 1).getText().toLowerCase());
+        assertEquals("Column 1", getColumnHidingToggle(1).getText());
+
+        selectMenuPath("Component", "Columns", "Column 1", "Footer Type",
+                "Widget Footer");
+
+        getSidebarOpenButton().click();
+        assertEquals("Column 1", getColumnHidingToggle(1).getText());
+    }
+
+    @Test
+    public void testHeaderMergedRemoveColumn() {
+        selectMenuPath("Component", "Header", "Append header row");
+        selectMenuPath("Component", "Header", "Merge Header Cells [0,0..1]");
+
+        selectMenuPath("Component", "Footer", "Append footer row");
+        selectMenuPath("Component", "Footer", "Merge Footer Cells [0,0..1]");
+
+        checkMergedHeaderFooter();
+
+        selectMenuPath("Component", "Columns", "Column 1", "Remove");
+        selectMenuPath("Component", "Header", "Append header row");
+        selectMenuPath("Component", "Footer", "Append footer row");
+
+        checkHeaderAfterDelete();
+        checkFooterAfterDelete();
+
+    }
+
+    private void checkHeaderAfterDelete() {
+        GridCellElement c00;
+        c00 = getGridElement().getHeaderCell(0, 0);
+        assertEquals("Column 0", c00.getText());
+        assertEquals("Colspan of header cell [0,0]", "1",
+                c00.getAttribute("colspan"));
+
+        GridCellElement c01 = getGridElement().getHeaderCell(0, 1);
+        assertEquals("Column 2", c01.getText());
+
+        GridCellElement c10 = getGridElement().getHeaderCell(1, 0);
+        assertEquals("Header cell 0", c10.getText());
+
+        GridCellElement c11 = getGridElement().getHeaderCell(1, 1);
+        assertEquals("Header cell 2", c11.getText());
+
+        GridCellElement c20 = getGridElement().getHeaderCell(2, 0);
+        assertEquals("Header cell 0", c20.getText());
+
+        GridCellElement c21 = getGridElement().getHeaderCell(2, 1);
+        assertEquals("Header cell 1", c21.getText());
+    }
+
+    private void checkFooterAfterDelete() {
+        GridCellElement c10;
+        // footer has an invisible first row
+        c10 = getGridElement().getFooterCell(1, 0);
+        assertEquals("Footer cell 0", c10.getText());
+        assertEquals("Colspan of footer cell [0,0]", "1",
+                c10.getAttribute("colspan"));
+
+        GridCellElement c11 = getGridElement().getFooterCell(1, 1);
+        assertEquals("Footer cell 2", c11.getText());
+
+        GridCellElement c20 = getGridElement().getFooterCell(2, 0);
+        assertEquals("Footer cell 0", c20.getText());
+
+        GridCellElement c21 = getGridElement().getFooterCell(2, 1);
+        assertEquals("Footer cell 1", c21.getText());
+    }
+
+    private void checkMergedHeaderFooter() {
+        GridCellElement c00 = getGridElement().getHeaderCell(0, 0);
+        assertEquals("0+1", c00.getText());
+        assertEquals("Colspan of header cell [0,0]", "2",
+                c00.getAttribute("colspan"));
+
+        c00 = getGridElement().getFooterCell(0, 0);
+        assertEquals("0+1", c00.getText());
+        assertEquals("Colspan of footer cell [0,0]", "2",
+                c00.getAttribute("colspan"));
+    }
+
+    @Test
+    public void testHeaderMerge() {
+        selectMenuPath("Component", "Header", "Append header row");
+        selectMenuPath("Component", "Header", "Merge Header Cells [0,0..1]");
+        selectMenuPath("Component", "Header", "Merge Header Cells [1,1..3]");
+        selectMenuPath("Component", "Header", "Merge Header Cells [0,6..7]");
+
+        GridCellElement mergedCell1 = getGridElement().getHeaderCell(0, 0);
+        assertEquals("0+1", mergedCell1.getText());
+        assertEquals("Colspan, cell [0,0]", "2",
+                mergedCell1.getAttribute("colspan"));
+
+        GridCellElement mergedCell2 = getGridElement().getHeaderCell(1, 1);
+        assertEquals("1+2+3", mergedCell2.getText());
+        assertEquals("Colspan of cell [1,1]", "3",
+                mergedCell2.getAttribute("colspan"));
+
+        GridCellElement mergedCell3 = getGridElement().getHeaderCell(0, 6);
+        assertEquals("6+7", mergedCell3.getText());
+        assertEquals("Colspan of cell [0,6]", "2",
+                mergedCell3.getAttribute("colspan"));
+
+    }
+
+    @Test
+    public void testFooterMerge() {
+        selectMenuPath("Component", "Footer", "Append footer row");
+        selectMenuPath("Component", "Footer", "Merge Footer Cells [0,0..1]");
+        selectMenuPath("Component", "Footer", "Merge Footer Cells [1,1..3]");
+        selectMenuPath("Component", "Footer", "Merge Footer Cells [0,6..7]");
+
+        GridCellElement mergedCell1 = getGridElement().getFooterCell(0, 0);
+        assertEquals("0+1", mergedCell1.getText());
+        assertEquals("Colspan, cell [0,0]", "2",
+                mergedCell1.getAttribute("colspan"));
+
+        GridCellElement mergedCell2 = getGridElement().getFooterCell(1, 1);
+        assertEquals("1+2+3", mergedCell2.getText());
+        assertEquals("Colspan of cell [1,1]", "3",
+                mergedCell2.getAttribute("colspan"));
+
+        GridCellElement mergedCell3 = getGridElement().getFooterCell(0, 6);
+        assertEquals("6+7", mergedCell3.getText());
+        assertEquals("Colspan of cell [0,6]", "2",
+                mergedCell3.getAttribute("colspan"));
+
     }
 
     private void toggleColumnHidable(int index) {

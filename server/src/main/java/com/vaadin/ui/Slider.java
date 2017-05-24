@@ -28,6 +28,8 @@ import com.vaadin.shared.ui.slider.SliderState;
 import com.vaadin.ui.declarative.DesignAttributeHandler;
 import com.vaadin.ui.declarative.DesignContext;
 
+import elemental.json.Json;
+
 /**
  * A component for selecting a numerical value within a range.
  *
@@ -45,8 +47,7 @@ public class Slider extends AbstractField<Double> {
          *
          * See #12133.
          */
-        getUI().getConnectorTracker().getDiffState(Slider.this).put("value",
-                value);
+        updateDiffstate("value", Json.create(value));
 
         try {
             setValue(value, true);
@@ -303,7 +304,7 @@ public class Slider extends AbstractField<Double> {
 
     @Override
     public Double getValue() {
-        return getState().value;
+        return getState(false).value;
     }
 
     @Override

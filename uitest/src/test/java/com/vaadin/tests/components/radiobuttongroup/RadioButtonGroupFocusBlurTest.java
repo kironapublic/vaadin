@@ -23,9 +23,10 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.remote.DesiredCapabilities;
 
-import com.vaadin.testbench.customelements.RadioButtonGroupElement;
 import com.vaadin.testbench.elements.LabelElement;
+import com.vaadin.testbench.elements.RadioButtonGroupElement;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
 /**
@@ -38,29 +39,31 @@ public class RadioButtonGroupFocusBlurTest extends MultiBrowserTest {
     public void focusBlurEvents() {
         openTestURL();
 
-        List<WebElement> radioButtons = $(RadioButtonGroupElement.class).first()
+        RadioButtonGroupElement radioButtonGroup = $(
+                RadioButtonGroupElement.class).first();
+        List<WebElement> radioButtons = radioButtonGroup
                 .findElements(By.tagName("input"));
-        radioButtons.get(0).click();
+        radioButtonGroup.selectByText("1");
 
         // Focus event is fired
         Assert.assertTrue(logContainsText("1. Focus Event"));
 
-        radioButtons.get(1).click();
+        radioButtonGroup.selectByText("2");
         // click on the second radio button doesn't fire anything
         Assert.assertFalse(logContainsText("2."));
 
-        // click in the middle between the first and the second (inside group).
-        WebElement first = radioButtons.get(0);
-        int middle = (first.getLocation().y + first.getSize().height
-                + radioButtons.get(1).getLocation().y) / 2;
-        new Actions(getDriver()).moveByOffset(first.getLocation().x, middle)
+        // move the cursor to the middle of the first element,
+        // offset to the middle of the two and perform click
+        new Actions(getDriver()).moveToElement(radioButtons.get(0))
+                .moveByOffset(0,
+                        (radioButtons.get(1).getLocation().y
+                                - radioButtons.get(0).getLocation().y) / 2)
                 .click().build().perform();
         // no new events
         Assert.assertFalse(logContainsText("2."));
 
         // click to label of a radio button
-        $(RadioButtonGroupElement.class).first()
-                .findElements(By.tagName("label")).get(2).click();
+        radioButtonGroup.findElements(By.tagName("label")).get(2).click();
         // no new events
         Assert.assertFalse(logContainsText("2."));
 
@@ -69,7 +72,7 @@ public class RadioButtonGroupFocusBlurTest extends MultiBrowserTest {
         // blur event is fired
         Assert.assertTrue(logContainsText("2. Blur Event"));
 
-        radioButtons.get(3).click();
+        radioButtonGroup.selectByText("4");
         // Focus event is fired
         Assert.assertTrue(logContainsText("3. Focus Event"));
 
@@ -82,5 +85,11 @@ public class RadioButtonGroupFocusBlurTest extends MultiBrowserTest {
         radioButtons.get(4).sendKeys(Keys.TAB);
         // focus has gone away
         waitUntil(driver -> logContainsText("4. Blur Event"), 5);
+    }
+
+    @Override
+    public List<DesiredCapabilities> getBrowsersToTest() {
+        // Focus does not move when expected with Selenium/TB and Firefox 45
+        return getBrowsersExcludingFirefox();
     }
 }

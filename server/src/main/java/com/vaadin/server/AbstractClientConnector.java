@@ -47,6 +47,7 @@ import com.vaadin.ui.LegacyComponent;
 import com.vaadin.ui.UI;
 
 import elemental.json.JsonObject;
+import elemental.json.JsonValue;
 
 /**
  * An abstract base class for ClientConnector implementations. This class
@@ -97,13 +98,12 @@ public abstract class AbstractClientConnector
 
     @Override
     public Registration addAttachListener(AttachListener listener) {
-        addListener(AttachEvent.ATTACH_EVENT_IDENTIFIER, AttachEvent.class,
-                listener, AttachListener.attachMethod);
-        return () -> removeListener(AttachEvent.ATTACH_EVENT_IDENTIFIER,
-                AttachEvent.class, listener);
+        return addListener(AttachEvent.ATTACH_EVENT_IDENTIFIER,
+                AttachEvent.class, listener, AttachListener.attachMethod);
     }
 
     @Override
+    @Deprecated
     public void removeAttachListener(AttachListener listener) {
         removeListener(AttachEvent.ATTACH_EVENT_IDENTIFIER, AttachEvent.class,
                 listener);
@@ -111,13 +111,12 @@ public abstract class AbstractClientConnector
 
     @Override
     public Registration addDetachListener(DetachListener listener) {
-        addListener(DetachEvent.DETACH_EVENT_IDENTIFIER, DetachEvent.class,
-                listener, DetachListener.detachMethod);
-        return () -> removeListener(DetachEvent.DETACH_EVENT_IDENTIFIER,
-                DetachEvent.class, listener);
+        return addListener(DetachEvent.DETACH_EVENT_IDENTIFIER,
+                DetachEvent.class, listener, DetachListener.detachMethod);
     }
 
     @Override
+    @Deprecated
     public void removeDetachListener(DetachListener listener) {
         removeListener(DetachEvent.DETACH_EVENT_IDENTIFIER, DetachEvent.class,
                 listener);
@@ -537,13 +536,13 @@ public abstract class AbstractClientConnector
                 .iterator();
         final Iterator<Extension> extensionsIterator = extensions.iterator();
         Iterable<? extends ClientConnector> combinedIterable = () -> new Iterator<ClientConnector>() {
-            
+
             @Override
             public boolean hasNext() {
                 return componentsIterator.hasNext()
-                    || extensionsIterator.hasNext();
+                        || extensionsIterator.hasNext();
             }
-            
+
             @Override
             public ClientConnector next() {
                 if (componentsIterator.hasNext()) {
@@ -554,12 +553,12 @@ public abstract class AbstractClientConnector
                 }
                 throw new NoSuchElementException();
             }
-            
+
             @Override
             public void remove() {
                 throw new UnsupportedOperationException();
             }
-            
+
         };
         return combinedIterable;
     }
@@ -751,21 +750,24 @@ public abstract class AbstractClientConnector
      *            the object instance who owns the activation method.
      * @param method
      *            the activation method.
-     *
-     * @since 6.2
+     * @return a registration object for removing the listener
+     * @since 8.0
      */
-    protected void addListener(String eventIdentifier, Class<?> eventType,
-            Object target, Method method) {
+    protected Registration addListener(String eventIdentifier,
+            Class<?> eventType, Object target, Method method) {
         if (eventRouter == null) {
             eventRouter = new EventRouter();
         }
         boolean needRepaint = !eventRouter.hasListeners(eventType);
-        eventRouter.addListener(eventType, target, method);
+        Registration registration = eventRouter.addListener(eventType, target,
+                method);
 
         if (needRepaint) {
             ComponentStateUtil.addRegisteredEventListener(getState(),
                     eventIdentifier);
         }
+
+        return registration;
     }
 
     /**
@@ -806,7 +808,11 @@ public abstract class AbstractClientConnector
      *            type <code>eventType</code> with one or more methods.
      *
      * @since 6.2
+     * @deprecated use a {@link Registration} from
+     *             {@link #addListener(Class, Object, Method)} to remove a
+     *             listener
      */
+    @Deprecated
     protected void removeListener(String eventIdentifier, Class<?> eventType,
             Object target) {
         if (eventRouter != null) {
@@ -838,14 +844,15 @@ public abstract class AbstractClientConnector
      *            the object instance who owns the activation method.
      * @param method
      *            the activation method.
-     *
+     * @return a registration object for removing the listener
      */
     @Override
-    public void addListener(Class<?> eventType, Object target, Method method) {
+    public Registration addListener(Class<?> eventType, Object target,
+            Method method) {
         if (eventRouter == null) {
             eventRouter = new EventRouter();
         }
-        eventRouter.addListener(eventType, target, method);
+        return eventRouter.addListener(eventType, target, method);
     }
 
     /**
@@ -871,8 +878,7 @@ public abstract class AbstractClientConnector
      * <p>
      * Note: Using this method is discouraged because it cannot be checked
      * during compilation. Use {@link #addListener(Class, Object, Method)} or
-     * {@link #addListener(com.vaadin.ui.Component.Listener)} instead.
-     * </p>
+     * {@link #addListener(String, Class, Object, Method) instead. </p>
      *
      * @param eventType
      *            the type of the listened event. Events of this type or its
@@ -881,18 +887,20 @@ public abstract class AbstractClientConnector
      *            the object instance who owns the activation method.
      * @param methodName
      *            the name of the activation method.
+     * @return a registration object for removing the listener
      * @deprecated As of 7.0. This method should be avoided. Use
      *             {@link #addListener(Class, Object, Method)} or
      *             {@link #addListener(String, Class, Object, Method)} instead.
+     * @since 8.0
      */
     @Override
     @Deprecated
-    public void addListener(Class<?> eventType, Object target,
+    public Registration addListener(Class<?> eventType, Object target,
             String methodName) {
         if (eventRouter == null) {
             eventRouter = new EventRouter();
         }
-        eventRouter.addListener(eventType, target, methodName);
+        return eventRouter.addListener(eventType, target, methodName);
     }
 
     /**
@@ -912,7 +920,10 @@ public abstract class AbstractClientConnector
      * @param target
      *            the target object that has registered to listen to events of
      *            type <code>eventType</code> with one or more methods.
+     * @deprecated use a {@link Registration} from {@link #addListener} to
+     *             remove a listener
      */
+    @Deprecated
     @Override
     public void removeListener(Class<?> eventType, Object target) {
         if (eventRouter != null) {
@@ -938,8 +949,12 @@ public abstract class AbstractClientConnector
      * @param method
      *            the method owned by <code>target</code> that's registered to
      *            listen to events of type <code>eventType</code>.
+     * @deprecated use a {@link Registration} from
+     *             {@link #addListener(Class, Object, Method)} to remove a
+     *             listener
      */
     @Override
+    @Deprecated
     public void removeListener(Class<?> eventType, Object target,
             Method method) {
         if (eventRouter != null) {
@@ -1081,5 +1096,33 @@ public abstract class AbstractClientConnector
     @Override
     public int hashCode() {
         return super.hashCode();
+    }
+
+    /**
+     * Sets the expected value of a state property so that changes can be
+     * properly sent to the client. This needs to be done in cases where a state
+     * change originates from the client, since otherwise the server-side would
+     * fail to recognize if the value is changed back to its previous value.
+     *
+     * @param propertyName
+     *            the name of the shared state property to update
+     * @param newValue
+     *            the new diffstate reference value
+     */
+    protected void updateDiffstate(String propertyName, JsonValue newValue) {
+        if (!isAttached()) {
+            return;
+        }
+
+        JsonObject diffState = getUI().getConnectorTracker().getDiffState(this);
+        if (diffState == null) {
+            return;
+        }
+
+        assert diffState.hasKey(propertyName) : "Diffstate for "
+                + getClass().getName() + " has no property named "
+                + propertyName;
+
+        diffState.put(propertyName, newValue);
     }
 }

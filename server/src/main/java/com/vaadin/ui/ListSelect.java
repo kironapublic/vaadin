@@ -17,7 +17,8 @@ package com.vaadin.ui;
 
 import java.util.Collection;
 
-import com.vaadin.server.data.DataSource;
+import com.vaadin.data.HasDataProvider;
+import com.vaadin.data.provider.DataProvider;
 import com.vaadin.shared.ui.listselect.ListSelectState;
 
 /**
@@ -29,7 +30,8 @@ import com.vaadin.shared.ui.listselect.ListSelectState;
  * @param <T>
  *            item type
  */
-public class ListSelect<T> extends AbstractMultiSelect<T> {
+public class ListSelect<T> extends AbstractMultiSelect<T>
+        implements HasDataProvider<T> {
 
     /** Default number of rows visible for select. */
     // protected to allow javadoc linking
@@ -54,16 +56,17 @@ public class ListSelect<T> extends AbstractMultiSelect<T> {
     }
 
     /**
-     * Constructs a new ListSelect with caption and data source for options.
+     * Constructs a new ListSelect with caption and data provider for options.
      *
      * @param caption
      *            the caption to set, can be {@code null}
-     * @param dataSource
-     *            the data source, not {@code null}
+     * @param dataProvider
+     *            the data provider, not {@code null}
+     * @since 8.0
      */
-    public ListSelect(String caption, DataSource<T> dataSource) {
+    public ListSelect(String caption, DataProvider<T, ?> dataProvider) {
         this(caption);
-        setDataSource(dataSource);
+        setDataProvider(dataProvider);
     }
 
     /**
@@ -75,7 +78,7 @@ public class ListSelect<T> extends AbstractMultiSelect<T> {
      *            the options, cannot be {@code null}
      */
     public ListSelect(String caption, Collection<T> options) {
-        this(caption, DataSource.create(options));
+        this(caption, DataProvider.ofCollection(options));
     }
 
     /**
@@ -95,7 +98,7 @@ public class ListSelect<T> extends AbstractMultiSelect<T> {
      * select.
      * <p>
      * If a height if set (using {@link #setHeight(String)} or
-     * {@link #setHeight(float, int)}) it overrides the number of rows. Leave
+     * {@link #setHeight(float, Unit)}) it overrides the number of rows. Leave
      * the height undefined to use this method.
      * <p>
      * Default value is {@link #DEFAULT_ROWS}
@@ -120,5 +123,15 @@ public class ListSelect<T> extends AbstractMultiSelect<T> {
     @Override
     protected ListSelectState getState(boolean markAsDirty) {
         return (ListSelectState) super.getState(markAsDirty);
+    }
+
+    @Override
+    public DataProvider<T, ?> getDataProvider() {
+        return internalGetDataProvider();
+    }
+
+    @Override
+    public void setDataProvider(DataProvider<T, ?> dataProvider) {
+        internalSetDataProvider(dataProvider);
     }
 }

@@ -29,12 +29,12 @@ import com.vaadin.shared.Registration;
 
 /**
  * Multi selection component which allows to select and deselect multiple items.
- * 
+ *
  * @author Vaadin Ltd
- * 
+ *
  * @param <T>
  *            the type of the items to select
- * 
+ *
  * @since 8.0
  *
  */
@@ -136,4 +136,15 @@ public interface MultiSelect<T> extends HasValue<Set<T>>, Serializable {
      */
     public Registration addSelectionListener(
             MultiSelectionListener<T> listener);
+
+    /**
+     * MultiSelect empty value should always be an empty set by default and not
+     * {@code null}.
+     *
+     * @return An empty set, not {@code null}
+     */
+    public default Set<T> getEmptyValue() {
+        return Collections.emptySet();
+    }
+
 }

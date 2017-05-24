@@ -19,7 +19,8 @@ package com.vaadin.server;
 import java.io.Serializable;
 import java.util.HashMap;
 
-import com.vaadin.server.data.DataKeyMapper;
+import com.vaadin.data.ValueProvider;
+import com.vaadin.data.provider.DataKeyMapper;
 
 /**
  * <code>KeyMapper</code> is the simple two-way map for generating textual keys
@@ -61,6 +62,11 @@ public class KeyMapper<V> implements DataKeyMapper<V>, Serializable {
         keyObjectMap.put(key, o);
 
         return key;
+    }
+
+    @Override
+    public boolean has(V o) {
+        return objectKeyMap.containsKey(o);
     }
 
     /**
@@ -112,5 +118,18 @@ public class KeyMapper<V> implements DataKeyMapper<V>, Serializable {
      */
     public boolean containsKey(String key) {
         return keyObjectMap.containsKey(key);
+    }
+
+    @Override
+    public void refresh(V dataObject,
+            ValueProvider<V, Object> identifierGetter) {
+        Object id = identifierGetter.apply(dataObject);
+        objectKeyMap.entrySet().stream()
+                .filter(e -> identifierGetter.apply(e.getKey()).equals(id))
+                .findAny().ifPresent(e -> {
+                    String key = objectKeyMap.remove(e.getKey());
+                    objectKeyMap.put(dataObject, key);
+                    keyObjectMap.put(key, dataObject);
+                });
     }
 }

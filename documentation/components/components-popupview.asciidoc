@@ -1,11 +1,11 @@
 ---
 title: PopupView
-order: 29
+order: 31
 layout: page
 ---
 
 [[components.popupview]]
-= [classname]#PopupView#
+= PopupView
 
 ifdef::web[]
 [.sampler]
@@ -42,11 +42,10 @@ programmatically by calling [methodname]#setPopupVisible(true)#. For example:
 [source, java]
 ----
 // A pop-up view without minimalized representation
-PopupView popup = new PopupView(null,
-    new Table(null, TableExample.generateContent()));
+PopupView popup = new PopupView(null, myComponent);
 
 // A component to open the view
-Button button = new Button("Show table", click -> // Java 8
+Button button = new Button("Show details", click ->
      popup.setPopupVisible(true));
 
 layout.addComponents(button, popup);

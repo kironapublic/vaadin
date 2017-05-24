@@ -16,8 +16,10 @@
 package com.vaadin.ui;
 
 import java.io.Serializable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +37,6 @@ import com.vaadin.shared.ui.menubar.MenuBarState;
 import com.vaadin.ui.Component.Focusable;
 import com.vaadin.ui.declarative.DesignAttributeHandler;
 import com.vaadin.ui.declarative.DesignContext;
-import java.util.ArrayDeque;
-import java.util.Deque;
 
 /**
  * <p>
@@ -434,6 +434,7 @@ public class MenuBar extends AbstractComponent
      * clicks on the containing {@link com.vaadin.ui.MenuBar.MenuItem}. The
      * selected item is given as an argument.
      */
+    @FunctionalInterface
     public interface Command extends Serializable {
         public void menuSelected(MenuBar.MenuItem selectedItem);
     }
@@ -467,7 +468,7 @@ public class MenuBar extends AbstractComponent
          * command associated with it. Icon and command can be null, but a
          * caption must be given.
          *
-         * @param text
+         * @param caption
          *            The text associated with the command
          * @param command
          *            The command to be fired
@@ -934,7 +935,6 @@ public class MenuBar extends AbstractComponent
          * The CSS style corresponding to the checked state is "-checked".
          * </p>
          *
-         * @return true if the item is checked, false otherwise
          * @since 6.6.2
          */
         public void setChecked(boolean checked) {

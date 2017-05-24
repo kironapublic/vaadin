@@ -23,10 +23,12 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.gwt.core.client.JsArrayString;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.vaadin.client.ApplicationConnection;
+import com.vaadin.client.ComponentConnector;
 import com.vaadin.client.FastStringMap;
 import com.vaadin.client.FastStringSet;
 import com.vaadin.client.JsArrayObject;
@@ -59,6 +61,7 @@ public abstract class AbstractConnector
 
     private ApplicationConnection connection;
     private String id;
+    private int tag = -1;
 
     private HandlerManager handlerManager;
     private FastStringMap<HandlerManager> statePropertyHandlerManagers;
@@ -118,6 +121,14 @@ public abstract class AbstractConnector
         this.connection = connection;
         id = connectorId;
 
+        // Doing this here because we want to run it after connection and id has
+        // been set but before init() is called to enable e.g.
+        // JavaScriptConnector to use connection when determining the tag name
+        if (this instanceof ComponentConnector) {
+            setConnectorId(((ComponentConnector) this).getWidget().getElement(),
+                    connectorId);
+        }
+
         addStateChangeHandler(this);
         if (Profiler.isEnabled()) {
             Profiler.enter(
@@ -130,6 +141,11 @@ public abstract class AbstractConnector
         }
         Profiler.leave("AbstractConnector.doInit");
     }
+
+    private static native void setConnectorId(Element el, String id)
+    /*-{
+        el.tkPid = id;
+    }-*/;
 
     /**
      * Called when the connector has been initialized. Override this method to
@@ -507,5 +523,19 @@ public abstract class AbstractConnector
             return true;
         }
 
+    }
+
+    @Override
+    public int getTag() {
+        return tag;
+    }
+
+    @Override
+    public void setTag(int tag) {
+        if (this.tag >= 0) {
+            throw new IllegalStateException(
+                    "Tag already set for this " + getClass().getSimpleName());
+        }
+        this.tag = tag;
     }
 }

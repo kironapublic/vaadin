@@ -21,6 +21,7 @@ import com.vaadin.event.ConnectorEventListener;
 import com.vaadin.event.MouseEvents.ClickEvent;
 import com.vaadin.shared.MouseEventDetails;
 import com.vaadin.shared.Registration;
+import com.vaadin.shared.ui.grid.renderers.ClickableRendererState;
 import com.vaadin.shared.ui.grid.renderers.RendererClickRpc;
 import com.vaadin.ui.Grid;
 import com.vaadin.ui.Grid.Column;
@@ -45,8 +46,9 @@ public abstract class ClickableRenderer<T, V> extends AbstractRenderer<T, V> {
      * An interface for listening to {@link RendererClickEvent renderer click
      * events}.
      *
-     * @see {@link ButtonRenderer#addClickListener(RendererClickListener)}
+     * @see ButtonRenderer#addClickListener(RendererClickListener)
      */
+    @FunctionalInterface
     public interface RendererClickListener<T> extends ConnectorEventListener {
 
         static final Method CLICK_METHOD = ReflectTools.findMethod(
@@ -71,10 +73,10 @@ public abstract class ClickableRenderer<T, V> extends AbstractRenderer<T, V> {
     public static class RendererClickEvent<T> extends ClickEvent {
 
         private final T item;
-        private final Column column;
+        private final Column<T, ?> column;
 
-        protected RendererClickEvent(Grid<T> source, T item, Column column,
-                MouseEventDetails mouseEventDetails) {
+        protected RendererClickEvent(Grid<T> source, T item,
+                Column<T, ?> column, MouseEventDetails mouseEventDetails) {
             super(source, mouseEventDetails);
             this.item = item;
             this.column = column;
@@ -84,6 +86,7 @@ public abstract class ClickableRenderer<T, V> extends AbstractRenderer<T, V> {
          * Returns the item of the row where the click event originated.
          *
          * @return the item of the clicked row
+         * @since 8.0
          */
         public T getItem() {
             return item;
@@ -94,7 +97,7 @@ public abstract class ClickableRenderer<T, V> extends AbstractRenderer<T, V> {
          *
          * @return the column of the click event
          */
-        public Column getColumn() {
+        public Column<T, ?> getColumn() {
             return column;
         }
     }
@@ -126,13 +129,14 @@ public abstract class ClickableRenderer<T, V> extends AbstractRenderer<T, V> {
     protected ClickableRenderer(Class<V> presentationType,
             String nullRepresentation) {
         super(presentationType, nullRepresentation);
-        registerRpc((RendererClickRpc) (String rowKey, String columnId, MouseEventDetails mouseDetails) -> {
+        registerRpc((RendererClickRpc) (String rowKey, String columnId,
+                MouseEventDetails mouseDetails) -> {
             Grid<T> grid = getParentGrid();
             T item = grid.getDataCommunicator().getKeyMapper().get(rowKey);
-            Column column = grid.getColumn(columnId);
-            
-            fireEvent(new RendererClickEvent<>(grid, item, column,
-                mouseDetails));
+            Column<T, V> column = getParent();
+
+            fireEvent(
+                    new RendererClickEvent<>(grid, item, column, mouseDetails));
         });
     }
 
@@ -142,11 +146,11 @@ public abstract class ClickableRenderer<T, V> extends AbstractRenderer<T, V> {
      *
      * @param listener
      *            the click listener to be added, not null
+     * @since 8.0
      */
     public Registration addClickListener(RendererClickListener<T> listener) {
-        addListener(RendererClickEvent.class, listener,
+        return addListener(RendererClickEvent.class, listener,
                 RendererClickListener.CLICK_METHOD);
-        return () -> removeListener(RendererClickEvent.class, listener);
     }
 
     /**
@@ -158,5 +162,15 @@ public abstract class ClickableRenderer<T, V> extends AbstractRenderer<T, V> {
     @Deprecated
     public void removeClickListener(RendererClickListener<T> listener) {
         removeListener(RendererClickEvent.class, listener);
+    }
+
+    @Override
+    protected ClickableRendererState getState() {
+        return (ClickableRendererState) super.getState();
+    }
+
+    @Override
+    protected ClickableRendererState getState(boolean markAsDirty) {
+        return (ClickableRendererState) super.getState(markAsDirty);
     }
 }

@@ -24,6 +24,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import com.vaadin.event.selection.SelectionListener;
+import com.vaadin.shared.Registration;
+
 /**
  * Models the selection logic of a {@code Listing} component. Determines how
  * items can be selected and deselected.
@@ -72,8 +75,13 @@ public interface SelectionModel<T> extends Serializable {
             if (item != null) {
                 select(item);
             } else {
-                deselectAll();
+                getSelectedItem().ifPresent(this::deselect);
             }
+        }
+
+        @Override
+        public default void deselectAll() {
+            setSelectedItem(null);
         }
 
         /**
@@ -90,6 +98,31 @@ public interface SelectionModel<T> extends Serializable {
             return getSelectedItem().map(Collections::singleton)
                     .orElse(Collections.emptySet());
         }
+
+        @Override
+        default Optional<T> getFirstSelectedItem() {
+            return getSelectedItem();
+        }
+
+        /**
+         * Sets whether it's allowed to deselect the selected row through the
+         * UI. Deselection is allowed by default.
+         *
+         * @param deselectAllowed
+         *            <code>true</code> if the selected row can be deselected
+         *            without selecting another row instead; otherwise
+         *            <code>false</code>.
+         */
+        public void setDeselectAllowed(boolean deselectAllowed);
+
+        /**
+         * Gets whether it's allowed to deselect the selected row through the
+         * UI.
+         *
+         * @return <code>true</code> if deselection is allowed; otherwise
+         *         <code>false</code>
+         */
+        public boolean isDeselectAllowed();
     }
 
     /**
@@ -140,6 +173,12 @@ public interface SelectionModel<T> extends Serializable {
                     Collections.emptySet());
         }
 
+        @SuppressWarnings("unchecked")
+        @Override
+        public default void deselect(T item) {
+            deselectItems(item);
+        }
+
         /**
          * Removes the given items from the set of currently selected items.
          * <p>
@@ -165,7 +204,7 @@ public interface SelectionModel<T> extends Serializable {
          * If all the added items were already selected and the removed items
          * were not selected, this is a NO-OP.
          * <p>
-         * Duplicate items (in both add & remove sets) are ignored.
+         * Duplicate items (in both add &amp; remove sets) are ignored.
          *
          * @param addedItems
          *            the items to add, not {@code null}
@@ -173,6 +212,16 @@ public interface SelectionModel<T> extends Serializable {
          *            the items to remove, not {@code null}
          */
         public void updateSelection(Set<T> addedItems, Set<T> removedItems);
+
+        @Override
+        default Optional<T> getFirstSelectedItem() {
+            return getSelectedItems().stream().findFirst();
+        }
+
+        /**
+         * Selects all available the items.
+         */
+        public void selectAll();
     }
 
     /**
@@ -186,6 +235,17 @@ public interface SelectionModel<T> extends Serializable {
      * @return the items in the current selection, not null
      */
     public Set<T> getSelectedItems();
+
+    /**
+     * Get first selected data item.
+     * <p>
+     * This is the same as {@link Single#getSelectedItem()} in case of single
+     * selection and the first selected item from
+     * {@link Multi#getSelectedItems()} in case of multiselection.
+     *
+     * @return the first selected item.
+     */
+    Optional<T> getFirstSelectedItem();
 
     /**
      * Selects the given item. Depending on the implementation, may cause other
@@ -206,11 +266,9 @@ public interface SelectionModel<T> extends Serializable {
     public void deselect(T item);
 
     /**
-     * Deselects all currently selected items.
+     * Deselects all currently selected items, if any.
      */
-    public default void deselectAll() {
-        getSelectedItems().forEach(this::deselect);
-    }
+    public void deselectAll();
 
     /**
      * Returns whether the given item is currently selected.
@@ -222,4 +280,14 @@ public interface SelectionModel<T> extends Serializable {
     public default boolean isSelected(T item) {
         return getSelectedItems().contains(item);
     }
+
+    /**
+     * Adds a generic listener to this selection model, accepting both single
+     * and multiselection events.
+     *
+     * @param listener
+     *            the listener to add
+     * @return a registration handle for removing the listener
+     */
+    public Registration addSelectionListener(SelectionListener<T> listener);
 }

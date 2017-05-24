@@ -3,7 +3,7 @@ package com.vaadin.tests.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.VerticalLayout;
 
@@ -13,6 +13,8 @@ public class Log extends VerticalLayout {
     private int nextLogNr = 1;
 
     public Log(int nr) {
+        setSpacing(false);
+        setMargin(false);
         for (int i = 0; i < nr; i++) {
             Label l = createEventLabel();
             l.setId("Log_row_" + i);

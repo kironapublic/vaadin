@@ -55,6 +55,7 @@ import com.vaadin.annotations.VaadinServletConfiguration;
 import com.vaadin.annotations.VaadinServletConfiguration.InitParameterName;
 import com.vaadin.sass.internal.ScssStylesheet;
 import com.vaadin.server.communication.ServletUIInitHandler;
+import com.vaadin.shared.ApplicationConstants;
 import com.vaadin.shared.JsonConstants;
 import com.vaadin.shared.Version;
 import com.vaadin.ui.UI;
@@ -297,10 +298,10 @@ public class VaadinServlet extends HttpServlet implements Constants {
     /**
      * Gets the currently used Vaadin servlet. The current servlet is
      * automatically defined when initializing the servlet and when processing
-     * requests to the server and in threads started at a point when the current
-     * servlet is defined (see {@link InheritableThreadLocal}). In other cases,
-     * (e.g. from background threads started in some other way), the current
-     * servlet is not automatically defined.
+     * requests to the server (see {@link ThreadLocal}) and in
+     * {@link VaadinSession#access(Runnable)} and {@link UI#access(Runnable)}.
+     * In other cases, (e.g. from background threads), the current servlet is
+     * not automatically defined.
      * <p>
      * The current servlet is derived from the current service using
      * {@link VaadinService#getCurrent()}
@@ -495,9 +496,6 @@ public class VaadinServlet extends HttpServlet implements Constants {
      * Check that cookie support is enabled in the browser. Only checks UIDL
      * requests.
      *
-     * @param requestType
-     *            Type of the request as returned by
-     *            {@link #getRequestType(HttpServletRequest)}
      * @param request
      *            The request from the browser
      * @param response
@@ -553,7 +551,7 @@ public class VaadinServlet extends HttpServlet implements Constants {
      *             if the writing failed due to input/output error.
      *
      * @deprecated As of 7.0. This method is retained only for backwards
-     *             compatibility and for {@link GAEVaadinServlet}.
+     *             compatibility and for GAEVaadinServlet.
      */
     @Deprecated
     protected void criticalNotification(VaadinServletRequest request,
@@ -588,7 +586,7 @@ public class VaadinServlet extends HttpServlet implements Constants {
                 output += "</a>";
             }
             getService().writeStringResponse(response,
-                    "text/html; charset=UTF-8", output);
+                    ApplicationConstants.CONTENT_TYPE_TEXT_HTML_UTF_8, output);
         }
     }
 
@@ -778,7 +776,7 @@ public class VaadinServlet extends HttpServlet implements Constants {
         }
         response.setHeader("Cache-Control", cacheControl);
         response.setDateHeader("Expires",
-                System.currentTimeMillis() + (resourceCacheTime * 1000));
+                System.currentTimeMillis() + resourceCacheTime * 1000);
 
         // Find the modification timestamp
         long lastModifiedTime = 0;
@@ -978,7 +976,7 @@ public class VaadinServlet extends HttpServlet implements Constants {
      * @throws IOException
      *             if there was a problem while locating the file
      */
-    protected URL findResourceURL(String filename) throws IOException {
+    public URL findResourceURL(String filename) throws IOException {
         URL resourceUrl = getServletContext().getResource(filename);
         if (resourceUrl == null) {
             // try if requested file is found from class loader
@@ -1140,6 +1138,7 @@ public class VaadinServlet extends HttpServlet implements Constants {
     @Deprecated
     protected boolean isAllowedVAADINResourceUrl(HttpServletRequest request,
             URL resourceUrl) {
+        String resourcePath = resourceUrl.getPath();
         if ("jar".equals(resourceUrl.getProtocol())) {
             // This branch is used for accessing resources directly from the
             // Vaadin JAR in development environments and in similar cases.
@@ -1149,8 +1148,8 @@ public class VaadinServlet extends HttpServlet implements Constants {
             // However, performing a check in case some servers or class loaders
             // try to normalize the path by collapsing ".." before the class
             // loader sees it.
-
-            if (!resourceUrl.getPath().contains("!/VAADIN/")) {
+            if (!resourcePath.contains("!/VAADIN/")
+                    && !resourcePath.contains("!/META-INF/resources/VAADIN/")) {
                 getLogger().log(Level.INFO,
                         "Blocked attempt to access a JAR entry not starting with /VAADIN/: {0}",
                         resourceUrl);
@@ -1166,8 +1165,8 @@ public class VaadinServlet extends HttpServlet implements Constants {
 
             // Check that the URL is in a VAADIN directory and does not contain
             // "/../"
-            if (!resourceUrl.getPath().contains("/VAADIN/")
-                    || resourceUrl.getPath().contains("/../")) {
+            if (!resourcePath.contains("/VAADIN/")
+                    || resourcePath.contains("/../")) {
                 getLogger().log(Level.INFO,
                         "Blocked attempt to access file: {0}", resourceUrl);
                 return false;
@@ -1270,6 +1269,16 @@ public class VaadinServlet extends HttpServlet implements Constants {
         return getStaticFilePath(request) != null;
     }
 
+    /**
+     * Returns the relative path at which static files are served for a request
+     * (if any).
+     *
+     * @param request
+     *            HTTP request
+     * @return relative servlet path or null if the request path does not
+     *         contain "/VAADIN/" or the request has no path info
+     * @since 8.0
+     */
     protected String getStaticFilePath(HttpServletRequest request) {
         String pathInfo = request.getPathInfo();
         if (pathInfo == null) {
@@ -1308,21 +1317,6 @@ public class VaadinServlet extends HttpServlet implements Constants {
     }
 
     /**
-     * Write a redirect response to the main page of the application.
-     *
-     * @param request
-     * @param response
-     * @throws IOException
-     *             if sending the redirect fails due to an input/output error or
-     *             a bad application URL
-     */
-    private void redirectToApplication(HttpServletRequest request,
-            HttpServletResponse response) throws IOException {
-        String applicationUrl = getApplicationUrl(request).toExternalForm();
-        response.sendRedirect(response.encodeRedirectURL(applicationUrl));
-    }
-
-    /**
      * Gets the current application URL from request.
      *
      * @param request
@@ -1339,10 +1333,9 @@ public class VaadinServlet extends HttpServlet implements Constants {
             throws MalformedURLException {
         final URL reqURL = new URL((request.isSecure() ? "https://" : "http://")
                 + request.getServerName()
-                + ((request.isSecure() && request.getServerPort() == 443)
-                        || (!request.isSecure()
-                                && request.getServerPort() == 80) ? ""
-                                        : ":" + request.getServerPort())
+                + (request.isSecure() && request.getServerPort() == 443
+                        || !request.isSecure() && request.getServerPort() == 80
+                                ? "" : ":" + request.getServerPort())
                 + request.getRequestURI());
         String servletPath = "";
         if (request

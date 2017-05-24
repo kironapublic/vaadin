@@ -37,9 +37,9 @@ import com.vaadin.client.ui.FocusableFlowPanel;
  * Focusable flow panel which fires focus/blur events if it or any of its child
  * is focused/blured, but doesn't fire events if it happens between its content
  * (child) elements.
- * 
- * @author Vaadin Ltd
  *
+ * @author Vaadin Ltd
+ * @since 8.0
  */
 public class ChildFocusAwareFlowPanel extends FocusableFlowPanel
         implements HasAllFocusHandlers {

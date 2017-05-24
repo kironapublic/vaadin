@@ -8,9 +8,11 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import com.vaadin.annotations.Widgetset;
+import com.vaadin.data.HasDataProvider;
+import com.vaadin.data.provider.DataProvider;
+import com.vaadin.data.provider.ListDataProvider;
+import com.vaadin.data.provider.Query;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.server.data.ListDataSource;
-import com.vaadin.server.data.Query;
 import com.vaadin.shared.data.DataCommunicatorConstants;
 import com.vaadin.tests.components.AbstractTestUIWithLog;
 import com.vaadin.tests.widgetset.TestingWidgetSet;
@@ -22,18 +24,18 @@ import com.vaadin.ui.HorizontalLayout;
 public class DummyData extends AbstractTestUIWithLog {
 
     /**
-     * DataSource that keeps track on how often the data is requested.
+     * DataProvider that keeps track on how often the data is requested.
      */
-    private class LoggingDataSource extends ListDataSource<String> {
+    private class LoggingDataProvider extends ListDataProvider<String> {
         private int count = 0;
 
-        private LoggingDataSource(Collection<String> collection) {
+        private LoggingDataProvider(Collection<String> collection) {
             super(collection);
         }
 
         @Override
         public Stream<String> fetch(Query query) {
-            log("Backend request #" + (count++));
+            log("Backend request #" + count++);
             return super.fetch(query);
         }
     }
@@ -42,7 +44,8 @@ public class DummyData extends AbstractTestUIWithLog {
      * Simplified server only selection model. Selection state passed in data,
      * shown as bold text.
      */
-    public static class DummyComponent extends AbstractSingleSelect<String> {
+    public static class DummyComponent extends AbstractSingleSelect<String>
+            implements HasDataProvider<String> {
 
         private String selected;
 
@@ -61,7 +64,7 @@ public class DummyData extends AbstractTestUIWithLog {
         }
 
         @Override
-        public void select(String item) {
+        public void setValue(String item) {
             if (selected != null) {
                 getDataCommunicator().refresh(selected);
             }
@@ -72,11 +75,15 @@ public class DummyData extends AbstractTestUIWithLog {
         }
 
         @Override
-        public void deselect(String item) {
-            if (item == selected) {
-                select(null);
-            }
+        public DataProvider<String, ?> getDataProvider() {
+            return internalGetDataProvider();
         }
+
+        @Override
+        public void setDataProvider(DataProvider<String, ?> dataProvider) {
+            internalSetDataProvider(dataProvider);
+        }
+
     }
 
     @Override
@@ -86,19 +93,20 @@ public class DummyData extends AbstractTestUIWithLog {
         for (int i = 0; i < 300; ++i) {
             items.add("Foo " + i);
         }
-        dummy.setDataSource(new LoggingDataSource(items));
-        dummy.select("Foo 200");
+        dummy.setDataProvider(new LoggingDataProvider(items));
+        dummy.setValue("Foo 200");
 
         HorizontalLayout controls = new HorizontalLayout();
         addComponent(controls);
         controls.addComponent(new Button("Select Foo 20", e -> {
-            dummy.select("Foo " + 20);
+            dummy.setValue("Foo " + 20);
         }));
-        controls.addComponent(new Button("Reset data source", e -> {
-            dummy.setDataSource(new LoggingDataSource(items));
+        controls.addComponent(new Button("Reset data provider", e -> {
+            dummy.setDataProvider(new LoggingDataProvider(items));
         }));
         controls.addComponent(new Button("Remove all data", e -> {
-            dummy.setDataSource(new LoggingDataSource(Collections.emptyList()));
+            dummy.setDataProvider(
+                    new LoggingDataProvider(Collections.emptyList()));
         }));
         addComponent(dummy);
     }

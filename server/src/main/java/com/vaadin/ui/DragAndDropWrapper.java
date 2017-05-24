@@ -41,12 +41,27 @@ import com.vaadin.shared.ui.dd.HorizontalDropLocation;
 import com.vaadin.shared.ui.dd.VerticalDropLocation;
 import com.vaadin.shared.ui.draganddropwrapper.DragAndDropWrapperConstants;
 import com.vaadin.shared.ui.draganddropwrapper.DragAndDropWrapperServerRpc;
+import com.vaadin.shared.ui.draganddropwrapper.DragAndDropWrapperState;
 import com.vaadin.ui.declarative.DesignContext;
+import com.vaadin.ui.dnd.DragSourceExtension;
+import com.vaadin.ui.dnd.DropTargetExtension;
 
+/**
+ * @author Vaadin Ltd
+ * @deprecated Replaced in 8.1 with {@link DragSourceExtension} and
+ *             {@link DropTargetExtension}.
+ */
 @SuppressWarnings("serial")
+@Deprecated
 public class DragAndDropWrapper extends CustomComponent
         implements DropTarget, DragSource, LegacyComponent {
 
+    /**
+     * @deprecated Since 8.1, will be replaced by FileDropTargetExtension and
+     *             FileDropEvent,
+     *             https://github.com/vaadin/framework/issues/8891
+     */
+    @Deprecated
     public class WrapperTransferable extends TransferableImpl {
 
         private Html5File[] files;
@@ -501,5 +516,15 @@ public class DragAndDropWrapper extends CustomComponent
             child.attr(":drag-image", true);
             design.appendChild(child);
         }
+    }
+
+    @Override
+    protected DragAndDropWrapperState getState() {
+        return (DragAndDropWrapperState) super.getState();
+    }
+
+    @Override
+    protected DragAndDropWrapperState getState(boolean markAsDirty) {
+        return (DragAndDropWrapperState) super.getState(markAsDirty);
     }
 }

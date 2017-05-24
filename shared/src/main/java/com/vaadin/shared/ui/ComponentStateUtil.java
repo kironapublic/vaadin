@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.HashSet;
 
 import com.vaadin.shared.AbstractComponentState;
+import com.vaadin.shared.Registration;
 import com.vaadin.shared.communication.SharedState;
 
 public final class ComponentStateUtil implements Serializable {
@@ -55,9 +56,15 @@ public final class ComponentStateUtil implements Serializable {
     /**
      * Removes an event listener id.
      *
-     * @param eventListenerId
+     * @param state
+     *            shared state
+     * @param eventIdentifier
      *            The event identifier to remove
+     * @deprecated Use a {@link Registration} object returned by
+     *             {@link #addRegisteredEventListener(SharedState, String)} to
+     *             remove a listener
      */
+    @Deprecated
     public static final void removeRegisteredEventListener(SharedState state,
             String eventIdentifier) {
         if (state.registeredEventListeners == null) {
@@ -74,12 +81,15 @@ public final class ComponentStateUtil implements Serializable {
      *
      * @param eventListenerId
      *            The event identifier to add
+     * @return a registration object for removing the listener
+     * @since 8.0
      */
-    public static final void addRegisteredEventListener(SharedState state,
-            String eventListenerId) {
+    public static final Registration addRegisteredEventListener(
+            SharedState state, String eventListenerId) {
         if (state.registeredEventListeners == null) {
             state.registeredEventListeners = new HashSet<>();
         }
         state.registeredEventListeners.add(eventListenerId);
+        return () -> removeRegisteredEventListener(state, eventListenerId);
     }
 }

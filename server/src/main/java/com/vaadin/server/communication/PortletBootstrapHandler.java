@@ -78,7 +78,8 @@ public class PortletBootstrapHandler extends BootstrapHandler {
                 && !portalTheme.equals(context.getThemeName())) {
             String portalThemeUri = getThemeUri(context, portalTheme);
             // XSS safe - originates from portal properties
-            builder.append("vaadin.loadTheme('").append(portalThemeUri).append("');");
+            builder.append("vaadin.loadTheme('").append(portalThemeUri)
+                    .append("');");
         }
 
         super.appendMainScriptTagContents(context, builder);
@@ -117,5 +118,11 @@ public class PortletBootstrapHandler extends BootstrapHandler {
                 serviceUrlParameterName);
 
         return parameters;
+    }
+
+    @Override
+    protected String getContextRootPath(BootstrapContext context) {
+        // Not really supported in portlet environments
+        return ".";
     }
 }

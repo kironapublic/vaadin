@@ -16,10 +16,11 @@
 
 package com.vaadin.tests;
 
+import java.time.LocalDate;
 import java.util.Locale;
 
 import com.vaadin.server.Sizeable;
-import com.vaadin.shared.ui.datefield.Resolution;
+import com.vaadin.shared.ui.datefield.DateResolution;
 import com.vaadin.tests.components.TestDateField;
 import com.vaadin.ui.AbstractDateField;
 import com.vaadin.ui.Button;
@@ -82,8 +83,8 @@ public class TestForBasicApplicationLayout extends CustomComponent {
         controls.addComponent(click);
         controls.addComponent(click2);
         reportLayout.addComponent(controls);
-        final AbstractDateField cal = new TestDateField();
-        cal.setResolution(Resolution.DAY);
+        final AbstractDateField<LocalDate, DateResolution> cal = new TestDateField();
+        cal.setResolution(DateResolution.DAY);
         cal.setLocale(new Locale("en", "US"));
         reportLayout.addComponent(cal);
         reportLayout.setExpandRatio(controls, 1);

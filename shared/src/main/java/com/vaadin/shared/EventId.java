@@ -25,4 +25,5 @@ public interface EventId extends Serializable {
     public static final String POLL = "poll";
     public static final String CHANGE = "change";
     public static final String CONTEXT_CLICK = "cClick";
+    public static final String WINDOW_ORDER = "windowOrder";
 }

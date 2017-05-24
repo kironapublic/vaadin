@@ -26,6 +26,9 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.vaadin.shared.Registration;
+import com.vaadin.util.CurrentInstance;
+
 /**
  *
  * @author Vaadin Ltd
@@ -42,6 +45,17 @@ public class VaadinServiceTest {
         }
     }
 
+    private class TestServiceDestroyListener implements ServiceDestroyListener {
+
+        int callCount = 0;
+
+        @Override
+        public void serviceDestroy(ServiceDestroyEvent event) {
+            callCount++;
+        }
+
+    }
+
     private String createCriticalNotification(String caption, String message,
             String details, String url) {
         return VaadinService.createCriticalNotificationJSON(caption, message,
@@ -50,10 +64,7 @@ public class VaadinServiceTest {
 
     @Test
     public void testFireSessionDestroy() throws ServletException {
-        ServletConfig servletConfig = new MockServletConfig();
-        VaadinServlet servlet = new VaadinServlet();
-        servlet.init(servletConfig);
-        VaadinService service = servlet.getService();
+        VaadinService service = createService();
 
         TestSessionDestroyListener listener = new TestSessionDestroyListener();
 
@@ -139,5 +150,53 @@ public class VaadinServiceTest {
                 "details", null);
 
         assertThat(notification, containsString("\"url\":null"));
+    }
+
+    @Test
+    public void currentInstancesAfterPendingAccessTasks() {
+        VaadinService service = createService();
+
+        MockVaadinSession session = new MockVaadinSession(service);
+        session.lock();
+        service.accessSession(session, () -> {
+            CurrentInstance.set(String.class, "Set in task");
+        });
+
+        CurrentInstance.set(String.class, "Original value");
+        service.runPendingAccessTasks(session);
+        Assert.assertEquals(
+                "Original CurrentInstance should be set after the task has been run",
+                "Original value", CurrentInstance.get(String.class));
+    }
+
+    private static VaadinService createService() {
+        ServletConfig servletConfig = new MockServletConfig();
+        VaadinServlet servlet = new VaadinServlet();
+        try {
+            servlet.init(servletConfig);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        VaadinService service = servlet.getService();
+        return service;
+    }
+
+    @Test
+    public void fireServiceDestroy() {
+        VaadinService service = createService();
+        TestServiceDestroyListener listener = new TestServiceDestroyListener();
+        TestServiceDestroyListener listener2 = new TestServiceDestroyListener();
+        service.addServiceDestroyListener(listener);
+        Registration remover2 = service.addServiceDestroyListener(listener2);
+
+        service.destroy();
+        Assert.assertEquals(1, listener.callCount);
+        Assert.assertEquals(1, listener2.callCount);
+        service.removeServiceDestroyListener(listener);
+        remover2.remove();
+
+        service.destroy();
+        Assert.assertEquals(1, listener.callCount);
+        Assert.assertEquals(1, listener2.callCount);
     }
 }

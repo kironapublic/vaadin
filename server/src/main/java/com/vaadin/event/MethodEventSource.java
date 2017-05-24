@@ -19,6 +19,8 @@ package com.vaadin.event;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 
+import com.vaadin.shared.Registration;
+
 /**
  * <p>
  * Interface for classes supporting registration of methods as event receivers.
@@ -54,13 +56,16 @@ public interface MethodEventSource extends Serializable {
      *            the object instance who owns the activation method.
      * @param method
      *            the activation method.
+     * @return a registration object for removing the listener
      * @throws java.lang.IllegalArgumentException
      *             unless <code>method</code> has exactly one match in
      *             <code>object</code>
      * @throws NullPointerException
      *             if {@code object} is {@code null}
+     * @since 8.0
      */
-    public void addListener(Class<?> eventType, Object object, Method method);
+    public Registration addListener(Class<?> eventType, Object object,
+            Method method);
 
     /**
      * <p>
@@ -89,13 +94,15 @@ public interface MethodEventSource extends Serializable {
      *            the object instance who owns the activation method.
      * @param methodName
      *            the name of the activation method.
+     * @return a registration object for removing the listener
      * @throws java.lang.IllegalArgumentException
      *             unless <code>method</code> has exactly one match in
      *             <code>object</code>
      * @throws NullPointerException
      *             if {@code object} is {@code null}
+     * @since 8.0
      */
-    public void addListener(Class<?> eventType, Object object,
+    public Registration addListener(Class<?> eventType, Object object,
             String methodName);
 
     /**
@@ -136,7 +143,10 @@ public interface MethodEventSource extends Serializable {
      * @param method
      *            the method owned by the target that's registered to listen to
      *            events of type eventType.
+     * @deprecated use a {@link Registration} returned by
+     *             {@link #addListener(Class, Object, Method)}
      */
+    @Deprecated
     public void removeListener(Class<?> eventType, Object target,
             Method method);
 
@@ -167,7 +177,10 @@ public interface MethodEventSource extends Serializable {
      * @param methodName
      *            the name of the method owned by <code>target</code> that's
      *            registered to listen to events of type <code>eventType</code>.
+     * @deprecated use a {@link Registration} returned by
+     *             {@link #addListener(Class, Object, String)}
      */
+    @Deprecated
     public void removeListener(Class<?> eventType, Object target,
             String methodName);
 }

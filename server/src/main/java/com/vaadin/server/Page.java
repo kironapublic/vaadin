@@ -20,14 +20,16 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EventObject;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.vaadin.annotations.HtmlImport;
+import com.vaadin.annotations.StyleSheet;
 import com.vaadin.event.EventRouter;
-import com.vaadin.event.FieldEvents.FocusListener;
 import com.vaadin.shared.Registration;
 import com.vaadin.shared.ui.BorderStyle;
 import com.vaadin.shared.ui.ui.PageClientRpc;
@@ -35,6 +37,7 @@ import com.vaadin.shared.ui.ui.PageState;
 import com.vaadin.shared.ui.ui.UIConstants;
 import com.vaadin.shared.ui.ui.UIState;
 import com.vaadin.shared.util.SharedUtil;
+import com.vaadin.ui.Dependency;
 import com.vaadin.ui.JavaScript;
 import com.vaadin.ui.LegacyWindow;
 import com.vaadin.ui.Link;
@@ -48,8 +51,9 @@ public class Page implements Serializable {
      * Listener that gets notified when the size of the browser window
      * containing the uI has changed.
      *
-     * @see UI#addListener(BrowserWindowResizeListener)
+     * @see #addBrowserWindowResizeListener(BrowserWindowResizeListener)
      */
+    @FunctionalInterface
     public interface BrowserWindowResizeListener extends Serializable {
         /**
          * Invoked when the browser window containing a UI has been resized.
@@ -251,7 +255,10 @@ public class Page implements Serializable {
      * changes.
      *
      * @see Page#addUriFragmentChangedListener(UriFragmentChangedListener)
+     * @deprecated Use {@link PopStateListener} instead
      */
+    @Deprecated
+    @FunctionalInterface
     public interface UriFragmentChangedListener extends Serializable {
         /**
          * Event handler method invoked when the URI fragment of the page
@@ -270,6 +277,32 @@ public class Page implements Serializable {
     private static final Method URI_FRAGMENT_CHANGED_METHOD = ReflectTools
             .findMethod(Page.UriFragmentChangedListener.class,
                     "uriFragmentChanged", UriFragmentChangedEvent.class);
+
+    /**
+     * Listener that that gets notified when the URI of the page changes due to
+     * back/forward functionality of the browser.
+     *
+     * @see Page#addPopStateListener(PopStateListener)
+     * @since 8.0
+     */
+    @FunctionalInterface
+    public interface PopStateListener extends Serializable {
+        /**
+         * Event handler method invoked when the URI fragment of the page
+         * changes. Please note that the initial URI fragment has already been
+         * set when a new UI is initialized, so there will not be any initial
+         * event for listeners added during {@link UI#init(VaadinRequest)}.
+         *
+         * @see Page#addUriFragmentChangedListener(UriFragmentChangedListener)
+         *
+         * @param event
+         *            the URI fragment changed event
+         */
+        public void uriChanged(PopStateEvent event);
+    }
+
+    private static final Method URI_CHANGED_METHOD = ReflectTools.findMethod(
+            Page.PopStateListener.class, "uriChanged", PopStateEvent.class);
 
     /**
      * Resources to be opened automatically on next repaint. The list is
@@ -327,6 +360,54 @@ public class Page implements Serializable {
         }
     }
 
+    /**
+     * Event fired when the URI of a <code>Page</code> changes (aka HTML 5
+     * popstate event) on the client side due to browsers back/forward
+     * functionality.
+     *
+     * @see Page#addPopStateListener(PopStateListener)
+     * @since 8.0
+     */
+    public static class PopStateEvent extends EventObject {
+
+        /**
+         * The new URI as String
+         */
+        private final String uri;
+
+        /**
+         * Creates a new instance of PopstateEvent.
+         *
+         * @param source
+         *            the Source of the event.
+         * @param uri
+         *            the new uri
+         */
+        public PopStateEvent(Page source, String uri) {
+            super(source);
+            this.uri = uri;
+        }
+
+        /**
+         * Gets the page in which the uri has changed.
+         *
+         * @return the page in which the uri has changed
+         */
+        public Page getPage() {
+            return (Page) getSource();
+        }
+
+        /**
+         * Get the new URI
+         *
+         * @return the new uri
+         */
+        public String getUri() {
+            return uri;
+        }
+    }
+
+    @FunctionalInterface
     private static interface InjectedStyle extends Serializable {
         public void paint(int id, PaintTarget target) throws PaintException;
     }
@@ -481,16 +562,22 @@ public class Page implements Serializable {
 
     private String windowName;
 
+    private String newPushState;
+    private String newReplaceState;
+
+    private List<Dependency> pendingDependencies;
+
     public Page(UI uI, PageState state) {
         this.uI = uI;
         this.state = state;
     }
 
-    private void addListener(Class<?> eventType, Object target, Method method) {
+    private Registration addListener(Class<?> eventType, Object target,
+            Method method) {
         if (!hasEventRouter()) {
             eventRouter = new EventRouter();
         }
-        eventRouter.addListener(eventType, target, method);
+        return eventRouter.addListener(eventType, target, method);
     }
 
     private void removeListener(Class<?> eventType, Object target,
@@ -513,13 +600,36 @@ public class Page implements Serializable {
      * @param listener
      *            the URI fragment listener to add
      * @return a registration object for removing the listener
+     * @deprecated Use {@link Page#addPopStateListener(PopStateListener)}
+     *             instead
+     * @since 8.0
      */
+    @Deprecated
     public Registration addUriFragmentChangedListener(
             Page.UriFragmentChangedListener listener) {
-        addListener(UriFragmentChangedEvent.class, listener,
+        return addListener(UriFragmentChangedEvent.class, listener,
                 URI_FRAGMENT_CHANGED_METHOD);
-        return () -> removeListener(UriFragmentChangedEvent.class, listener,
-                URI_FRAGMENT_CHANGED_METHOD);
+    }
+
+    /**
+     * Adds a listener that gets notified every time the URI of this page is
+     * changed due to back/forward functionality of the browser.
+     * <p>
+     * Note that one only gets notified when the back/forward button affects
+     * history changes with-in same UI, created by
+     * {@link Page#pushState(String)} or {@link Page#replaceState(String)}
+     * functions.
+     *
+     * @see #getLocation()
+     * @see Registration
+     *
+     * @param listener
+     *            the Popstate listener to add
+     * @return a registration object for removing the listener
+     * @since 8.0
+     */
+    public Registration addPopStateListener(Page.PopStateListener listener) {
+        return addListener(PopStateEvent.class, listener, URI_CHANGED_METHOD);
     }
 
     /**
@@ -532,7 +642,7 @@ public class Page implements Serializable {
      *
      * @deprecated As of 8.0, replaced by {@link Registration#remove()} in the
      *             registration object returned from
-     *             {@link #addUriFragmentChangedListener(FocusListener)}.
+     *             {@link #addUriFragmentChangedListener(UriFragmentChangedListener)}.
      */
     @Deprecated
     public void removeUriFragmentChangedListener(
@@ -579,6 +689,7 @@ public class Page implements Serializable {
         try {
             location = new URI(location.getScheme(),
                     location.getSchemeSpecificPart(), newUriFragment);
+            pushState(location);
         } catch (URISyntaxException e) {
             // This should not actually happen as the fragment syntax is not
             // constrained
@@ -587,7 +698,6 @@ public class Page implements Serializable {
         if (fireEvents) {
             fireEvent(new UriFragmentChangedEvent(this, newUriFragment));
         }
-        uI.markAsDirty();
     }
 
     private void fireEvent(EventObject event) {
@@ -742,15 +852,15 @@ public class Page implements Serializable {
      * @see BrowserWindowResizeListener#browserWindowResized(BrowserWindowResizeEvent)
      * @see UI#setResizeLazy(boolean)
      * @see Registration
+     * @since 8.0
      */
     public Registration addBrowserWindowResizeListener(
             BrowserWindowResizeListener resizeListener) {
-        addListener(BrowserWindowResizeEvent.class, resizeListener,
-                BROWSER_RESIZE_METHOD);
+        Registration registration = addListener(BrowserWindowResizeEvent.class,
+                resizeListener, BROWSER_RESIZE_METHOD);
         getState(true).hasResizeListeners = true;
         return () -> {
-            removeListener(BrowserWindowResizeEvent.class, resizeListener,
-                    BROWSER_RESIZE_METHOD);
+            registration.remove();
             getState(true).hasResizeListeners = hasEventRouter()
                     && eventRouter.hasListeners(BrowserWindowResizeEvent.class);
         };
@@ -866,9 +976,14 @@ public class Page implements Serializable {
             notifications = null;
         }
 
-        if (location != null) {
-            target.addAttribute(UIConstants.LOCATION_VARIABLE,
-                    location.toString());
+        if (newPushState != null) {
+            target.addAttribute(UIConstants.ATTRIBUTE_PUSH_STATE, newPushState);
+            newPushState = null;
+        }
+        if (newReplaceState != null) {
+            target.addAttribute(UIConstants.ATTRIBUTE_REPLACE_STATE,
+                    newReplaceState);
+            newReplaceState = null;
         }
 
         if (styles != null) {
@@ -932,6 +1047,84 @@ public class Page implements Serializable {
     }
 
     /**
+     * Updates the browsers URI without causing actual page change. This method
+     * is useful if you wish implement "deep linking" to your application.
+     * Calling the method also adds a new entry to clients browser history and
+     * you can further use {@link PopStateListener} to track the usage of
+     * back/forward feature in browser.
+     * <p>
+     * Note, the current implementation supports setting only one new uri in one
+     * user interaction.
+     *
+     * @param uri
+     *            to be used for pushState operation. The URI is resolved over
+     *            the current location. If the given URI is absolute, it must be
+     *            of same origin as the current URI or the browser will not
+     *            accept the new value.
+     * @since 8.0
+     */
+    public void pushState(String uri) {
+        newPushState = uri;
+        uI.markAsDirty();
+        location = location.resolve(uri);
+    }
+
+    /**
+     * Updates the browsers URI without causing actual page change. This method
+     * is useful if you wish implement "deep linking" to your application.
+     * Calling the method also adds a new entry to clients browser history and
+     * you can further use {@link PopStateListener} to track the usage of
+     * back/forward feature in browser.
+     * <p>
+     * Note, the current implementation supports setting only one new uri in one
+     * user interaction.
+     *
+     * @param uri
+     *            the URI to be used for pushState operation. The URI is
+     *            resolved over the current location. If the given URI is
+     *            absolute, it must be of same origin as the current URI or the
+     *            browser will not accept the new value.
+     * @since 8.0
+     */
+    public void pushState(URI uri) {
+        pushState(uri.toString());
+    }
+
+    /**
+     * Updates the browsers URI without causing actual page change in the same
+     * way as {@link #pushState(String)}, but does not add new entry to browsers
+     * history.
+     *
+     * @param uri
+     *            the URI to be used for replaceState operation. The URI is
+     *            resolved over the current location. If the given URI is
+     *            absolute, it must be of same origin as the current URI or the
+     *            browser will not accept the new value.
+     * @since 8.0
+     */
+    public void replaceState(String uri) {
+        newReplaceState = uri;
+        uI.markAsDirty();
+        location = location.resolve(uri);
+    }
+
+    /**
+     * Updates the browsers URI without causing actual page change in the same
+     * way as {@link #pushState(URI)}, but does not add new entry to browsers
+     * history.
+     *
+     * @param uri
+     *            the URI to be used for replaceState operation. The URI is
+     *            resolved over the current location. If the given URI is
+     *            absolute, it must be of same origin as the current URI or the
+     *            browser will not accept the new value.
+     * @since 8.0
+     */
+    public void replaceState(URI uri) {
+        replaceState(uri.toString());
+    }
+
+    /**
      * For internal use only. Used to update the server-side location when the
      * client-side location changes.
      *
@@ -943,22 +1136,25 @@ public class Page implements Serializable {
      */
     @Deprecated
     public void updateLocation(String location) {
-        updateLocation(location, true);
+        updateLocation(location, true, false);
     }
 
     /**
      * For internal use only. Used to update the server-side location when the
      * client-side location changes.
      *
-     * @since 7.2
+     * @since 8.0
      *
      * @param location
      *            the new location URI
      * @param fireEvents
      *            whether to fire {@link UriFragmentChangedEvent} if the URI
      *            fragment changes
+     * @param firePopstate
+     *            whether to fire {@link PopStateEvent}
      */
-    public void updateLocation(String location, boolean fireEvents) {
+    public void updateLocation(String location, boolean fireEvents,
+            boolean firePopstate) {
         try {
             String oldUriFragment = this.location.getFragment();
             this.location = new URI(location);
@@ -966,6 +1162,9 @@ public class Page implements Serializable {
             if (fireEvents
                     && !SharedUtil.equals(oldUriFragment, newUriFragment)) {
                 fireEvent(new UriFragmentChangedEvent(this, newUriFragment));
+            }
+            if (firePopstate) {
+                fireEvent(new PopStateEvent(this, location));
             }
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
@@ -1233,5 +1432,44 @@ public class Page implements Serializable {
 
     private boolean hasEventRouter() {
         return eventRouter != null;
+    }
+
+    /**
+     * Add a dependency that should be added to the current page.
+     * <p>
+     * These dependencies are always added before the dependencies included by
+     * using the annotations {@link HtmlImport}, {@link JavaScript} and
+     * {@link StyleSheet} during the same request.
+     * <p>
+     * Please note that these dependencies are always sent to the client side
+     * and not filtered out by any {@link DependencyFilter}.
+     *
+     * @param dependency
+     *            the dependency to add
+     * @since 8.1
+     */
+    public void addDependency(Dependency dependency) {
+        if (pendingDependencies == null) {
+            pendingDependencies = new ArrayList<>();
+        }
+        pendingDependencies.add(dependency);
+    }
+
+    /**
+     * Returns all pending dependencies.
+     * <p>
+     * For internal use only, calling this method will clear the pending
+     * dependencies.
+     *
+     * @return the pending dependencies to the current page
+     * @since 8.1
+     */
+    public Collection<Dependency> getPendingDependencies() {
+        ArrayList<Dependency> copy = new ArrayList<>();
+        if (pendingDependencies != null) {
+            copy.addAll(pendingDependencies);
+        }
+        pendingDependencies = null;
+        return copy;
     }
 }

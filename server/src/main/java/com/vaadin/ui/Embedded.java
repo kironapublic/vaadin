@@ -30,6 +30,7 @@ import com.vaadin.shared.MouseEventDetails;
 import com.vaadin.shared.Registration;
 import com.vaadin.shared.ui.embedded.EmbeddedConstants;
 import com.vaadin.shared.ui.embedded.EmbeddedServerRpc;
+import com.vaadin.shared.ui.embedded.EmbeddedState;
 
 /**
  * A component for embedding external objects.
@@ -527,17 +528,16 @@ public class Embedded extends AbstractComponent implements LegacyComponent {
      * @param listener
      *            The listener to add
      * @return a registration object for removing the listener
+     * @since 8.0
      */
     public Registration addClickListener(ClickListener listener) {
-        addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class, listener,
-                ClickListener.clickMethod);
-        return () -> removeListener(EventId.CLICK_EVENT_IDENTIFIER,
-                ClickEvent.class, listener);
+        return addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class,
+                listener, ClickListener.clickMethod);
     }
 
     /**
      * Remove a click listener from the component. The listener should earlier
-     * have been added using {@link #addListener(ClickListener)}.
+     * have been added using {@link #addClickListener(ClickListener)}.
      *
      * @param listener
      *            The listener to remove
@@ -557,4 +557,13 @@ public class Embedded extends AbstractComponent implements LegacyComponent {
         // TODO Remove once LegacyComponent is no longer implemented
     }
 
+    @Override
+    protected EmbeddedState getState() {
+        return (EmbeddedState) super.getState();
+    }
+
+    @Override
+    protected EmbeddedState getState(boolean markAsDirty) {
+        return (EmbeddedState) super.getState(markAsDirty);
+    }
 }

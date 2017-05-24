@@ -18,6 +18,7 @@ package com.vaadin.ui.components.colorpicker;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -33,6 +34,7 @@ import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.Component;
+import com.vaadin.ui.HasComponents;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Layout;
 import com.vaadin.ui.Slider;
@@ -70,6 +72,9 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
 
     /** The resize button. */
     private final Button resize = new Button("show/hide history");
+
+    /** The previously selected color. */
+    private Color previouslySelectedColor = Color.WHITE;
 
     /** The selected color. */
     private Color selectedColor = Color.WHITE;
@@ -118,6 +123,10 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
 
     /** The selectors. */
     private final Set<HasValue<Color>> selectors = new HashSet<>();
+
+    private boolean readOnly;
+
+    private boolean required;
 
     /**
      * Set true while the slider values are updated after colorChange. When
@@ -175,6 +184,7 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
         selPreview = new ColorPickerPreview(selectedColor);
         selPreview.setWidth("100%");
         selPreview.setHeight("20px");
+        selPreview.setRequiredIndicatorVisible(required);
         selPreview.addValueChangeListener(this::colorChanged);
         selectors.add(selPreview);
 
@@ -441,7 +451,7 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
     }
 
     private void okButtonClick(ClickEvent event) {
-        fireEvent(new ValueChangeEvent<>(this, true));
+        fireEvent(new ValueChangeEvent<>(this, previouslySelectedColor, true));
         close();
     }
 
@@ -472,6 +482,7 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
     public void setValue(Color color) {
         Objects.requireNonNull(color, "color cannot be null");
 
+        previouslySelectedColor = selectedColor;
         selectedColor = color;
 
         hsvGradient.setValue(selectedColor);
@@ -492,9 +503,8 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
     public Registration addValueChangeListener(
             ValueChangeListener<Color> listener) {
         Objects.requireNonNull(listener, "listener cannot be null");
-        addListener(ValueChangeEvent.class, listener,
+        return addListener(ValueChangeEvent.class, listener,
                 ValueChangeListener.VALUE_CHANGE_METHOD);
-        return () -> removeListener(ValueChangeEvent.class, listener);
     }
 
     /**
@@ -712,12 +722,15 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
 
     @Override
     public void setRequiredIndicatorVisible(boolean visible) {
-        super.setRequiredIndicatorVisible(visible);
+        required = visible;
+        if (selPreview != null) {
+            selPreview.setRequiredIndicatorVisible(required);
+        }
     }
 
     @Override
     public boolean isRequiredIndicatorVisible() {
-        return super.isRequiredIndicatorVisible();
+        return required;
     }
 
     private static Logger getLogger() {
@@ -726,11 +739,33 @@ public class ColorPickerPopup extends Window implements HasValue<Color> {
 
     @Override
     public void setReadOnly(boolean readOnly) {
-        super.setReadOnly(readOnly);
+        this.readOnly = readOnly;
+        updateColorComponents();
     }
 
     @Override
     public boolean isReadOnly() {
-        return super.isReadOnly();
+        return readOnly;
+    }
+
+    private void updateColorComponents() {
+        if (getContent() != null) {
+            updateColorComponents(getContent());
+        }
+    }
+
+    private void updateColorComponents(Component component) {
+        if (component instanceof HasValue<?>) {
+            ((HasValue<?>) component).setReadOnly(isReadOnly());
+            ((HasValue<?>) component)
+                    .setRequiredIndicatorVisible(isRequiredIndicatorVisible());
+        }
+        if (component instanceof HasComponents) {
+            Iterator<Component> iterator = ((HasComponents) component)
+                    .iterator();
+            while (iterator.hasNext()) {
+                updateColorComponents(iterator.next());
+            }
+        }
     }
 }

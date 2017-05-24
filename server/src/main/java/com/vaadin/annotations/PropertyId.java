@@ -20,25 +20,23 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.vaadin.data.BeanBinder;
 import com.vaadin.data.Binder;
 import com.vaadin.data.HasValue;
 
 /**
- * Defines the custom property name to be bound to a {@link Field} using
- * {@link Binder} or {@link BeanBinder}.
+ * Defines the custom property name to be bound to a {@link HasValue field
+ * component} using {@link Binder}.
  * <p>
- * The automatic data binding in Binder and BeanBinder relies on a naming
- * convention by default: properties of an item are bound to similarly named
- * field components in given a editor object. If you want to map a property with
- * a different name (ID) to a {@link HasValue}, you can use this annotation for
- * the member fields, with the name (ID) of the desired property as the
- * parameter.
+ * The automatic data binding in Binder relies on a naming convention by
+ * default: properties of an item are bound to similarly named field components
+ * in given a editor object. If you want to map a property with a different name
+ * (ID) to a {@link HasValue}, you can use this annotation for the member
+ * fields, with the name (ID) of the desired property as the parameter.
  * <p>
  * In following usage example, the text field would be bound to property "foo"
- * in the Entity class. <code>
+ * in the Entity class.
  * <pre>
- *    class Editor extends FormLayout {
+    class Editor extends FormLayout {
         &#64;PropertyId("foo")
         TextField myField = new TextField();
     }
@@ -49,13 +47,12 @@ import com.vaadin.data.HasValue;
 
     {
         Editor editor = new Editor();
-        BeanBinder<Entity> binder = new BeanBinder(Entity.class);
+        Binder&lt;Entity&gt; binder = new Binder(Entity.class);
         binder.bindInstanceFields(editor);
     }
    </pre>
- * </code>
  *
- * @since 7.0
+ * @since 8.0
  * @author Vaadin Ltd
  */
 @Target({ ElementType.FIELD })

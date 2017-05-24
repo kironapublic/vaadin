@@ -22,7 +22,7 @@ import org.junit.Test;
 import org.openqa.selenium.Keys;
 
 import com.vaadin.testbench.TestBenchElement;
-import com.vaadin.testbench.customelements.NativeSelectElement;
+import com.vaadin.testbench.elements.NativeSelectElement;
 import com.vaadin.testbench.elements.LabelElement;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
@@ -56,7 +56,7 @@ public class NativeSelectFocusBlurTest extends MultiBrowserTest {
         // Focus event is fired
         Assert.assertTrue(logContainsText("3. Focus Event"));
 
-        options.get(1).sendKeys(Keys.ARROW_UP, Keys.ENTER);
+        nativeSelect.sendKeys(Keys.ARROW_UP, Keys.ENTER);
         // No any new event
         Assert.assertFalse(logContainsText("4."));
     }

@@ -19,7 +19,7 @@ import com.vaadin.server.Resource;
 import com.vaadin.server.ThemeResource;
 import com.vaadin.server.UserError;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.tests.components.AbstractReindeerTestUI;
 import com.vaadin.ui.AbstractComponent;
 import com.vaadin.ui.AbstractLayout;
@@ -74,6 +74,10 @@ public abstract class BaseLayoutTestUI extends AbstractReindeerTestUI {
         try {
             l1 = (AbstractOrderedLayout) layoutClass.newInstance();
             l2 = (AbstractOrderedLayout) layoutClass.newInstance();
+            l1.setMargin(false);
+            l1.setSpacing(false);
+            l2.setMargin(false);
+            l2.setSpacing(false);
         } catch (InstantiationException e1) {
             // TODO Auto-generated catch block
             e1.printStackTrace();
@@ -180,10 +184,16 @@ public abstract class BaseLayoutTestUI extends AbstractReindeerTestUI {
     protected AbstractLayout createLabelsFields(
             Class<? extends AbstractComponent> compType, boolean useIcon,
             String ErrorMessage) {
-        AbstractLayout mainLayout = new VerticalLayout();
+        AbstractOrderedLayout mainLayout = new VerticalLayout();
+        mainLayout.setSpacing(false);
+        mainLayout.setMargin(false);
         AbstractLayout curLayout = null;
         try {
             curLayout = layoutClass.newInstance();
+            if (curLayout instanceof AbstractOrderedLayout) {
+                ((AbstractOrderedLayout) curLayout).setMargin(false);
+                ((AbstractOrderedLayout) curLayout).setSpacing(false);
+            }
         } catch (InstantiationException e1) {
             // TODO Auto-generated catch block
             e1.printStackTrace();
@@ -238,6 +248,8 @@ public abstract class BaseLayoutTestUI extends AbstractReindeerTestUI {
      */
     @Override
     protected void setup(VaadinRequest request) {
+        mainLayout.setMargin(false);
+        mainLayout.setSpacing(false);
         mainLayout.addComponent(l1);
         mainLayout.addComponent(l2);
         addComponent(mainLayout);

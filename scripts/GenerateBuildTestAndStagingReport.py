@@ -12,9 +12,7 @@ parser.add_argument("teamcityUrl", type=str, help="Address to the teamcity serve
 parser.add_argument("buildTypeId", type=str, help="The ID of this build step")
 parser.add_argument("buildId", type=str, help="ID of the build to generate this report for")
 
-parser.add_argument("frameworkRepoUrl", type=str, help="URL to the framework staging repository")
-parser.add_argument("archetypeRepoUrl", type=str, help="URL to the archetype staging repository")
-parser.add_argument("pluginRepoUrl", type=str, help="URL to the plugin staging repository")
+parser.add_argument("stagingRepoUrl", type=str, help="URL to the staging repository")
 args = parser.parse_args()
 
 buildResultUrl = "http://{}/viewLog.html?buildId={}&tab=buildResultsDiv&buildTypeId={}".format(args.teamcityUrl, args.buildId, args.buildTypeId)
@@ -65,7 +63,7 @@ def getDemoValidationStatusHtml():
 def getDemoLinksHtml():
     demos_html = "Try demos"
     link_list = list(map(lambda demo: "<a href='{url}/{demoName}-{version}'>{demoName}</a>".format(url=args.deployUrl, demoName=demo, version=args.version), demos))
-    return demos_html + getHtmlList(link_list)
+    return demos_html + getHtmlList(link_list) + "Note that the deployed framework8-demo WARs have a suffix -0..-4."
 
 def getApiDiffHtml():
     apidiff_html = "Check API diff"
@@ -73,7 +71,10 @@ def getApiDiffHtml():
         "client", "client-compiler",
         "compatibility-client",
         "compatibility-server",
+        "compatibility-server-gae",
         "compatibility-shared",
+        "liferay-integration",
+        "osgi-integration",
         "server", "shared"
     ]
     link_list = list(map(lambda module: "<a href='http://{}/repository/download/{}/{}:id/apidiff/{}/japicmp.html'>{}</a>".format(args.teamcityUrl, args.buildTypeId, args.buildId, module, module), modules))
@@ -110,11 +111,11 @@ def checkStagingContents(url, allowedArtifacts):
     allowedDirs = getAllowedArtifactPaths(allowedArtifacts)
     return set(dirs) == set(allowedDirs)
 
-def getStagingContentsHtml(repoUrl, allowedArtifacts, name):
+def getStagingContentsHtml(repoUrl, allowedArtifacts):
     if checkStagingContents(repoUrl, allowedArtifacts):
-        return createTableRow(traffic_light.format(color="green"), "No extra artifacts found in the {} staging repository. <a href=\"{}\">Link to the repository.</a>".format(name, repoUrl))
+        return createTableRow(traffic_light.format(color="green"), "Expected artifacts found in the staging repository. <a href=\"{}\">Link to the repository.</a>".format(repoUrl))
     else:
-        return createTableRow(traffic_light.format(color="red"), "Extra artifacts found in the {} staging repository. <a href=\"{}\">Link to the repository.</a>".format(name, repoUrl))
+        return createTableRow(traffic_light.format(color="red"), "Extraneous or missing artifacts in the staging repository. <a href=\"{}\">Link to the repository.</a>".format(repoUrl))
 
 def completeArtifactName(artifactId, version):
     return 'com/vaadin/' + artifactId + '/' + version
@@ -123,9 +124,7 @@ def completeArtifactNames(artifactIds, version):
     return list(map(lambda x: completeArtifactName(x, version), artifactIds))
 
 
-allowedPluginArtifacts = completeArtifactNames([ 'vaadin-maven-plugin' ], args.version)
-allowedArchetypeArtifacts = completeArtifactNames([ 'vaadin-archetype-application', 'vaadin-archetype-application-multimodule', 'vaadin-archetype-application-example', 'vaadin-archetype-widget', 'vaadin-archetype-liferay-portlet' ], args.version)
-allowedFrameworkArtifacts = completeArtifactNames([ 'vaadin-root', 'vaadin-bom', 'vaadin-shared', 'vaadin-server', 'vaadin-client', 'vaadin-client-compiler', 'vaadin-client-compiled', 'vaadin-push', 'vaadin-themes', 'vaadin-widgets', 'vaadin-compatibility-shared', 'vaadin-compatibility-server', 'vaadin-compatibility-client', 'vaadin-compatibility-client-compiled', 'vaadin-compatibility-themes' ], args.version)
+allowedArtifacts = completeArtifactNames([ 'vaadin-maven-plugin', 'vaadin-archetypes', 'vaadin-archetype-application', 'vaadin-archetype-application-multimodule', 'vaadin-archetype-application-example', 'vaadin-archetype-widget', 'vaadin-archetype-liferay-portlet', 'vaadin-root', 'vaadin-shared', 'vaadin-server', 'vaadin-client', 'vaadin-client-compiler', 'vaadin-client-compiled', 'vaadin-push', 'vaadin-themes', 'vaadin-compatibility-shared', 'vaadin-compatibility-server', "vaadin-compatibility-server-gae", 'vaadin-compatibility-client', 'vaadin-compatibility-client-compiled', 'vaadin-compatibility-themes', 'vaadin-liferay-integration', "vaadin-osgi-integration", 'vaadin-testbench-api', 'vaadin-bom' ], args.version)
 
 content = "<html><head></head><body><table>"
 traffic_light = "<svg width=\"20px\" height=\"20px\" style=\"padding-right:5px\"><circle cx=\"10\" cy=\"10\" r=\"10\" fill=\"{color}\"/></svg>"
@@ -150,9 +149,7 @@ except subprocess.CalledProcessError as e:
         raise e
 
 # check staging repositories don't contain extra artifacts
-content += getStagingContentsHtml(args.frameworkRepoUrl, allowedFrameworkArtifacts, "framework")
-content += getStagingContentsHtml(args.archetypeRepoUrl, allowedArchetypeArtifacts, "archetype")
-content += getStagingContentsHtml(args.pluginRepoUrl, allowedPluginArtifacts, "plugin")
+content += getStagingContentsHtml(args.stagingRepoUrl, allowedArtifacts)
 
 content += createTableRow("", "<h2>Manual checks before publishing</h2>")
 # try demos
@@ -163,16 +160,10 @@ content += createTableRow("", "<a href=\"http://{}/repository/download/{}/{}:id/
 # link to api diff
 content += createTableRow("", getApiDiffHtml())
 
-# check that trac tickets are in the correct status
-content += createTableRow("", "<a href=\"https://dev.vaadin.com/query?status=closed&status=pending-release&component=Core+Framework&resolution=fixed&group=milestone&col=id&col=summary&col=component&col=status&col=type&col=priority&col=milestone&order=priority\">Check that trac tickets have correct status</a>")
-# pending release tickets without milestone
-content += createTableRow("", "<a href=\"https://dev.vaadin.com/query?status=pending-release&milestone=\">Pending-release tickets without milestone</a>")
+# check that GitHub issues are in the correct status
+content += createTableRow("", "<a href=\"https://github.com/vaadin/framework/issues?q=is%3Aclosed+sort%3Aupdated-desc\">Check that closed GitHub issues have correct milestone</a>")
 
 content += createTableRow("", "<h2>Preparations before publishing</h2>")
-# close trac milestone
-content += createTableRow("", "<a href=\"https://dev.vaadin.com/milestone/Vaadin {version}\">Close Trac Milestone (deselect \"retarget tickets\")</a>".format(version=args.version))
-# verify pending release tickets still have milestone
-content += createTableRow("", "<a href=\"https://dev.vaadin.com/query?status=pending-release&component=Core+Framework&resolution=fixed&col=id&col=summary&col=component&col=milestone&col=status&col=type\">Verify pending release tickets still have milestone {version}</a>".format(version=args.version))
 # link to build dependencies tab to initiate publish step
 content += createTableRow("", "<a href=\"http://{}/viewLog.html?buildId={}&buildTypeId={}&tab=dependencies\"><h2>Start Publish Release from dependencies tab</h2></a>".format(args.teamcityUrl, args.buildId, args.buildTypeId))
 

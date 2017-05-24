@@ -38,6 +38,8 @@ import com.vaadin.ui.declarative.DesignContext;
 import com.vaadin.ui.declarative.DesignFormatter;
 import com.vaadin.util.ReflectTools;
 
+import elemental.json.Json;
+
 /**
  * A generic button component.
  *
@@ -61,8 +63,7 @@ public class Button extends AbstractFocusable
             // Makes sure the enabled=false state is noticed at once - otherwise
             // a following setEnabled(true) call might have no effect. see
             // ticket #10030
-            getUI().getConnectorTracker().getDiffState(Button.this)
-                    .put("enabled", false);
+            updateDiffstate("enabled", Json.create(false));
         }
     };
 
@@ -287,6 +288,7 @@ public class Button extends AbstractFocusable
      * @author Vaadin Ltd.
      * @since 3.0
      */
+    @FunctionalInterface
     public interface ClickListener extends Serializable {
 
         public static final Method BUTTON_CLICK_METHOD = ReflectTools
@@ -301,7 +303,6 @@ public class Button extends AbstractFocusable
          *            An event containing information about the click.
          */
         public void buttonClick(ClickEvent event);
-
     }
 
     /**
@@ -312,11 +313,10 @@ public class Button extends AbstractFocusable
      * @param listener
      *            the Listener to be added.
      * @return a registration object for removing the listener
+     * @since 8.0
      */
     public Registration addClickListener(ClickListener listener) {
-        addListener(ClickEvent.class, listener,
-                ClickListener.BUTTON_CLICK_METHOD);
-        return () -> removeListener(ClickEvent.class, listener,
+        return addListener(ClickEvent.class, listener,
                 ClickListener.BUTTON_CLICK_METHOD);
     }
 
@@ -542,7 +542,10 @@ public class Button extends AbstractFocusable
      * @param htmlContentAllowed
      *            <code>true</code> if caption is rendered as HTML,
      *            <code>false</code> otherwise
+     *
+     * @deprecated as of 8.0.0, use {@link #setCaptionAsHtml(boolean)} instead.
      */
+    @Deprecated
     public void setHtmlContentAllowed(boolean htmlContentAllowed) {
         getState().captionAsHtml = htmlContentAllowed;
     }
@@ -552,7 +555,10 @@ public class Button extends AbstractFocusable
      *
      * @return <code>true</code> if the caption text is to be rendered as HTML,
      *         <code>false</code> otherwise
+     *
+     * @deprecated as of 8.0.0, use {@link #isCaptionAsHtml()} instead.
      */
+    @Deprecated
     public boolean isHtmlContentAllowed() {
         return getState(false).captionAsHtml;
     }
@@ -572,7 +578,7 @@ public class Button extends AbstractFocusable
         Boolean plain = DesignAttributeHandler
                 .readAttribute(DESIGN_ATTR_PLAIN_TEXT, attr, Boolean.class);
         if (plain == null || !plain) {
-            setHtmlContentAllowed(true);
+            setCaptionAsHtml(true);
             content = design.html();
         } else {
             // content is not intended to be interpreted as HTML,

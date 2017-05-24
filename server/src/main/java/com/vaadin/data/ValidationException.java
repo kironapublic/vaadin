@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  */
 public class ValidationException extends Exception {
 
-    private final List<ValidationStatus<?>> fieldValidationErrors;
+    private final List<BindingValidationStatus<?>> fieldValidationErrors;
     private final List<ValidationResult> beanValidationErrors;
 
     /**
@@ -44,7 +44,8 @@ public class ValidationException extends Exception {
      * @param beanValidationErrors
      *            binder validation errors list
      */
-    public ValidationException(List<ValidationStatus<?>> fieldValidationErrors,
+    public ValidationException(
+            List<BindingValidationStatus<?>> fieldValidationErrors,
             List<ValidationResult> beanValidationErrors) {
         super("Validation has failed for some fields");
         this.fieldValidationErrors = Collections
@@ -74,14 +75,14 @@ public class ValidationException extends Exception {
      *
      * @return binding validation errors list
      */
-    public List<ValidationStatus<?>> getFieldValidationErrors() {
+    public List<BindingValidationStatus<?>> getFieldValidationErrors() {
         return fieldValidationErrors;
     }
 
     /**
      * Returns a list of the bean level validation errors which caused the
      * exception, or an empty list if the exception was caused by
-     * {@link #getBindingValidationErrors() binder level validation errors}.
+     * {@link #getFieldValidationErrors() field level validation errors}.
      *
      * @return binder validation errors list
      */

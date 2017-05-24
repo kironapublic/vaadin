@@ -17,6 +17,7 @@ package com.vaadin.v7.tests.server.component.grid;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.After;
@@ -24,15 +25,26 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.vaadin.ui.ComponentTest;
 import com.vaadin.v7.data.Container;
 import com.vaadin.v7.data.util.IndexedContainer;
 import com.vaadin.v7.event.SelectionEvent;
 import com.vaadin.v7.event.SelectionEvent.SelectionListener;
+import com.vaadin.v7.shared.ui.grid.selection.MultiSelectionModelServerRpc;
+import com.vaadin.v7.shared.ui.grid.selection.MultiSelectionModelState;
 import com.vaadin.v7.ui.Grid;
-import com.vaadin.v7.ui.Grid.MultiSelectionModel;
-import com.vaadin.v7.ui.Grid.SelectionMode;
+import com.vaadin.v7.ui.Grid.SelectionModel.HasUserSelectionAllowed;
 
 public class MultiSelectionModelTest {
+
+    private static class MultiSelectionModel
+            extends com.vaadin.v7.ui.Grid.MultiSelectionModel {
+        @Override
+        protected MultiSelectionModelState getState() {
+            // Overridden to be accessible from test
+            return super.getState();
+        }
+    }
 
     private Object itemId1Present = "itemId1Present";
     private Object itemId2Present = "itemId2Present";
@@ -52,8 +64,8 @@ public class MultiSelectionModelTest {
     public void setUp() {
         dataSource = createDataSource();
         grid = new Grid(dataSource);
-        grid.setSelectionMode(SelectionMode.MULTI);
-        model = (MultiSelectionModel) grid.getSelectionModel();
+        model = new MultiSelectionModel();
+        grid.setSelectionModel(model);
     }
 
     @After
@@ -102,6 +114,17 @@ public class MultiSelectionModelTest {
         }
 
         verifyCurrentSelection(itemId1Present, itemId2Present);
+    }
+
+    @Test
+    public void testSelectAllWithoutItems() throws Throwable {
+        Assert.assertFalse(model.getState().allSelected);
+        dataSource.removeAllItems();
+        Assert.assertFalse(model.getState().allSelected);
+        model.select();
+        Assert.assertFalse(model.getState().allSelected);
+        model.deselect();
+        Assert.assertFalse(model.getState().allSelected);
     }
 
     @Test
@@ -167,5 +190,41 @@ public class MultiSelectionModelTest {
             return;
         }
         Assert.fail("Not all items were correctly selected");
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void refuseSelectWhenUserSelectionDisallowed() {
+        ((HasUserSelectionAllowed) grid.getSelectionModel())
+                .setUserSelectionAllowed(false);
+        MultiSelectionModelServerRpc serverRpc = ComponentTest.getRpcProxy(
+                grid.getSelectionModel(), MultiSelectionModelServerRpc.class);
+        serverRpc.select(Collections.singletonList("a"));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void refuseDeselectWhenUserSelectionDisallowed() {
+        ((HasUserSelectionAllowed) grid.getSelectionModel())
+                .setUserSelectionAllowed(false);
+        MultiSelectionModelServerRpc serverRpc = ComponentTest.getRpcProxy(
+                grid.getSelectionModel(), MultiSelectionModelServerRpc.class);
+        serverRpc.deselect(Collections.singletonList("a"));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void refuseSelectAllWhenUserSelectionDisallowed() {
+        ((HasUserSelectionAllowed) grid.getSelectionModel())
+                .setUserSelectionAllowed(false);
+        MultiSelectionModelServerRpc serverRpc = ComponentTest.getRpcProxy(
+                grid.getSelectionModel(), MultiSelectionModelServerRpc.class);
+        serverRpc.selectAll();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void refuseDeselectAllWhenUserSelectionDisallowed() {
+        ((HasUserSelectionAllowed) grid.getSelectionModel())
+                .setUserSelectionAllowed(false);
+        MultiSelectionModelServerRpc serverRpc = ComponentTest.getRpcProxy(
+                grid.getSelectionModel(), MultiSelectionModelServerRpc.class);
+        serverRpc.deselectAll();
     }
 }

@@ -18,14 +18,18 @@ package com.vaadin.ui;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,6 +38,7 @@ import com.vaadin.annotations.PreserveOnRefresh;
 import com.vaadin.event.Action;
 import com.vaadin.event.Action.Handler;
 import com.vaadin.event.ActionManager;
+import com.vaadin.event.ConnectorEventListener;
 import com.vaadin.event.MouseEvents.ClickEvent;
 import com.vaadin.event.MouseEvents.ClickListener;
 import com.vaadin.event.UIEvents.PollEvent;
@@ -57,22 +62,30 @@ import com.vaadin.server.VaadinServlet;
 import com.vaadin.server.VaadinSession;
 import com.vaadin.server.VaadinSession.State;
 import com.vaadin.server.communication.PushConnection;
+import com.vaadin.shared.ApplicationConstants;
 import com.vaadin.shared.Connector;
 import com.vaadin.shared.EventId;
 import com.vaadin.shared.MouseEventDetails;
 import com.vaadin.shared.Registration;
 import com.vaadin.shared.communication.PushMode;
+import com.vaadin.shared.ui.WindowOrderRpc;
 import com.vaadin.shared.ui.ui.DebugWindowClientRpc;
 import com.vaadin.shared.ui.ui.DebugWindowServerRpc;
+import com.vaadin.shared.ui.ui.PageClientRpc;
 import com.vaadin.shared.ui.ui.ScrollClientRpc;
 import com.vaadin.shared.ui.ui.UIClientRpc;
 import com.vaadin.shared.ui.ui.UIConstants;
 import com.vaadin.shared.ui.ui.UIServerRpc;
 import com.vaadin.shared.ui.ui.UIState;
 import com.vaadin.ui.Component.Focusable;
+import com.vaadin.ui.Dependency.Type;
+import com.vaadin.ui.Window.WindowOrderChangeListener;
 import com.vaadin.ui.declarative.Design;
+import com.vaadin.ui.dnd.DragSourceExtension;
+import com.vaadin.ui.dnd.DropTargetExtension;
 import com.vaadin.util.ConnectorHelper;
 import com.vaadin.util.CurrentInstance;
+import com.vaadin.util.ReflectTools;
 
 /**
  * The topmost component in any component hierarchy. There is one UI for every
@@ -182,8 +195,9 @@ public abstract class UI extends AbstractSingleComponentContainer
         }
 
         @Override
-        public void acknowledge() {
-            // Nothing to do, just need the message to be sent and processed
+        public void popstate(String uri) {
+            getPage().updateLocation(uri, true, true);
+
         }
     };
     private DebugWindowServerRpc debugRpc = new DebugWindowServerRpc() {
@@ -245,6 +259,21 @@ public abstract class UI extends AbstractSingleComponentContainer
         }
     };
 
+    private WindowOrderRpc windowOrderRpc = new WindowOrderRpc() {
+
+        @Override
+        public void windowOrderChanged(
+                HashMap<Integer, Connector> windowOrders) {
+            Map<Integer, Window> orders = new LinkedHashMap<>();
+            for (Entry<Integer, Connector> entry : windowOrders.entrySet()) {
+                if (entry.getValue() instanceof Window) {
+                    orders.put(entry.getKey(), (Window) entry.getValue());
+                }
+            }
+            fireWindowOrder(orders);
+        }
+    };
+
     /**
      * Timestamp keeping track of the last heartbeat of this UI. Updated to the
      * current time whenever the application receives a heartbeat or UIDL
@@ -271,6 +300,11 @@ public abstract class UI extends AbstractSingleComponentContainer
     private int lastProcessedClientToServerId = -1;
 
     /**
+     * Stores the extension of the active drag source component
+     */
+    private DragSourceExtension<? extends AbstractComponent> activeDragSource;
+
+    /**
      * Creates a new empty UI without a caption. The content of the UI must be
      * set by calling {@link #setContent(Component)} before using the UI.
      */
@@ -290,6 +324,7 @@ public abstract class UI extends AbstractSingleComponentContainer
     public UI(Component content) {
         registerRpc(rpc);
         registerRpc(debugRpc);
+        registerRpc(windowOrderRpc);
         setSizeFull();
         setContent(content);
     }
@@ -387,6 +422,19 @@ public abstract class UI extends AbstractSingleComponentContainer
         fireEvent(new ClickEvent(this, mouseDetails));
     }
 
+    /**
+     * Fire a window order event.
+     *
+     * @param windows
+     *            The windows with their orders whose order has been updated.
+     */
+    private void fireWindowOrder(Map<Integer, Window> windows) {
+        for (Entry<Integer, Window> entry : windows.entrySet()) {
+            entry.getValue().fireWindowOrderChange(entry.getKey());
+        }
+        fireEvent(new WindowOrderUpdateEvent(this, windows.values()));
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public void changeVariables(Object source, Map<String, Object> variables) {
@@ -400,11 +448,6 @@ public abstract class UI extends AbstractSingleComponentContainer
             actionManager.handleActions(variables, this);
         }
 
-        if (variables.containsKey(UIConstants.LOCATION_VARIABLE)) {
-            String location = (String) variables
-                    .get(UIConstants.LOCATION_VARIABLE);
-            getPage().updateLocation(location, true);
-        }
     }
 
     /*
@@ -471,9 +514,23 @@ public abstract class UI extends AbstractSingleComponentContainer
                             "Error while detaching UI from session", e);
                 }
                 // Disable push when the UI is detached. Otherwise the
-                // push connection and possibly VaadinSession will live on.
+                // push connection and possibly VaadinSession will live
+                // on.
                 getPushConfiguration().setPushMode(PushMode.DISABLED);
-                setPushConnection(null);
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // This intentionally does disconnect without locking
+                        // the VaadinSession to avoid deadlocks where the server
+                        // uses a lock for the websocket connection
+
+                        // See https://dev.vaadin.com/ticket/18436
+                        // The underlying problem is
+                        // https://dev.vaadin.com/ticket/16919
+                        setPushConnection(null);
+                    }
+                }).start();
             }
             this.session = session;
         }
@@ -569,6 +626,7 @@ public abstract class UI extends AbstractSingleComponentContainer
         markAsDirty();
         window.fireClose();
         fireComponentDetachEvent(window);
+        fireWindowOrder(Collections.singletonMap(-1, window));
 
         return true;
     }
@@ -603,6 +661,8 @@ public abstract class UI extends AbstractSingleComponentContainer
             getState(false).localeServiceState);
 
     private String embedId;
+
+    private boolean mobileHtml5DndPolyfillLoaded;
 
     /**
      * This method is used by Component.Focusable objects to request focus to
@@ -737,10 +797,10 @@ public abstract class UI extends AbstractSingleComponentContainer
         int newWidth = page.getBrowserWindowWidth();
         int newHeight = page.getBrowserWindowHeight();
 
-        page.updateLocation(oldLocation.toString(), false);
+        page.updateLocation(oldLocation.toString(), false, false);
         page.updateBrowserWindowSize(oldWidth, oldHeight, false);
 
-        page.updateLocation(newLocation.toString(), true);
+        page.updateLocation(newLocation.toString(), true, false);
         page.updateBrowserWindowSize(newWidth, newHeight, true);
     }
 
@@ -779,7 +839,7 @@ public abstract class UI extends AbstractSingleComponentContainer
      * @see ThreadLocal
      */
     public static void setCurrent(UI ui) {
-        CurrentInstance.setInheritable(UI.class, ui);
+        CurrentInstance.set(UI.class, ui);
     }
 
     /**
@@ -915,12 +975,11 @@ public abstract class UI extends AbstractSingleComponentContainer
      * @param listener
      *            The listener to add, not null
      * @return a registration object for removing the listener
+     * @since 8.0
      */
     public Registration addClickListener(ClickListener listener) {
-        addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class, listener,
-                ClickListener.clickMethod);
-        return () -> removeListener(EventId.CLICK_EVENT_IDENTIFIER,
-                ClickEvent.class, listener);
+        return addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class,
+                listener, ClickListener.clickMethod);
     }
 
     /**
@@ -1398,12 +1457,10 @@ public abstract class UI extends AbstractSingleComponentContainer
      * <p>
      * Please note that the runnable might be invoked on a different thread or
      * later on the current thread, which means that custom thread locals might
-     * not have the expected values when the runnable is executed. Inheritable
-     * values in {@link CurrentInstance} will have the same values as when this
-     * method was invoked. {@link UI#getCurrent()},
-     * {@link VaadinSession#getCurrent()} and {@link VaadinService#getCurrent()}
-     * are set according to this UI before executing the runnable.
-     * Non-inheritable CurrentInstance values including
+     * not have the expected values when the command is executed.
+     * {@link UI#getCurrent()}, {@link VaadinSession#getCurrent()} and
+     * {@link VaadinService#getCurrent()} are set according to this UI before
+     * executing the command. Other standard CurrentInstance values such as
      * {@link VaadinService#getCurrentRequest()} and
      * {@link VaadinService#getCurrentResponse()} will not be defined.
      * </p>
@@ -1621,9 +1678,8 @@ public abstract class UI extends AbstractSingleComponentContainer
 
     @Override
     public Registration addPollListener(PollListener listener) {
-        addListener(EventId.POLL, PollEvent.class, listener,
+        return addListener(EventId.POLL, PollEvent.class, listener,
                 PollListener.POLL_METHOD);
-        return () -> removeListener(EventId.POLL, PollEvent.class, listener);
     }
 
     @Override
@@ -1730,5 +1786,183 @@ public abstract class UI extends AbstractSingleComponentContainer
     public void setLastProcessedClientToServerId(
             int lastProcessedClientToServerId) {
         this.lastProcessedClientToServerId = lastProcessedClientToServerId;
+    }
+
+    /**
+     * Adds a WindowOrderUpdateListener to the UI.
+     * <p>
+     * The WindowOrderUpdateEvent is fired when the order positions of windows
+     * are updated. It can happen when some window (this or other) is brought to
+     * front or detached.
+     * <p>
+     * The other way to listen window position for specific window is
+     * {@link Window#addWindowOrderChangeListener(WindowOrderChangeListener)}
+     *
+     * @see Window#addWindowOrderChangeListener(WindowOrderChangeListener)
+     *
+     * @param listener
+     *            the WindowModeChangeListener to add.
+     * @since 8.0
+     *
+     * @return a registration object for removing the listener
+     */
+    public Registration addWindowOrderUpdateListener(
+            WindowOrderUpdateListener listener) {
+        addListener(EventId.WINDOW_ORDER, WindowOrderUpdateEvent.class,
+                listener, WindowOrderUpdateListener.windowOrderUpdateMethod);
+        return () -> removeListener(EventId.WINDOW_ORDER,
+                WindowOrderUpdateEvent.class, listener);
+    }
+
+    /**
+     * Sets the drag source of an active HTML5 drag event.
+     *
+     * @param extension
+     *            Extension of the drag source component.
+     * @see DragSourceExtension
+     * @since 8.1
+     */
+    public void setActiveDragSource(
+            DragSourceExtension<? extends AbstractComponent> extension) {
+        activeDragSource = extension;
+    }
+
+    /**
+     * Gets the drag source of an active HTML5 drag event.
+     *
+     * @return Extension of the drag source component if the drag event is
+     *         active and originated from this UI, {@literal null} otherwise.
+     * @see DragSourceExtension
+     * @since 8.1
+     */
+    public DragSourceExtension<? extends AbstractComponent> getActiveDragSource() {
+        return activeDragSource;
+    }
+
+    /**
+     * Returns whether HTML5 DnD extensions {@link DragSourceExtension} and
+     * {@link DropTargetExtension} and alike should be enabled for mobile
+     * devices.
+     * <p>
+     * By default, it is disabled.
+     *
+     * @return {@code true} if enabled, {@code false} if not
+     * @since 8.1
+     * @see #setMobileHtml5DndEnabled(boolean)
+     */
+    public boolean isMobileHtml5DndEnabled() {
+        return getState(false).enableMobileHTML5DnD;
+    }
+
+    /**
+     * Enable or disable HTML5 DnD for mobile devices.
+     * <p>
+     * Usually you should enable the support in the {@link #init(VaadinRequest)}
+     * method. By default, it is disabled. This operation is NOOP when the user
+     * is not on a mobile device.
+     * <p>
+     * Changing this will effect all {@link DragSourceExtension} and
+     * {@link DropTargetExtension} (and subclasses) that have not yet been
+     * attached to the UI on the client side.
+     * <p>
+     * <em>NOTE: When disabling this after it has been enabled, it will not
+     * affect {@link DragSourceExtension} and {@link DropTargetExtension} (and
+     * subclasses) that have been previously added. Those extensions should be
+     * explicitly removed to make sure user cannot perform DnD operations
+     * anymore.</em>
+     *
+     * @param enabled
+     *            {@code true} if enabled, {@code false} if not
+     * @since 8.1
+     */
+    public void setMobileHtml5DndEnabled(boolean enabled) {
+        if (getState(false).enableMobileHTML5DnD != enabled) {
+            getState().enableMobileHTML5DnD = enabled;
+
+            if (isMobileHtml5DndEnabled()) {
+                loadMobileHtml5DndPolyfill();
+            }
+        }
+    }
+
+    /**
+     * Load and initialize the mobile drag-drop-polyfill if needed and not yet
+     * done so.
+     */
+    private void loadMobileHtml5DndPolyfill() {
+        if (mobileHtml5DndPolyfillLoaded) {
+            return;
+        }
+        if (!getPage().getWebBrowser().isTouchDevice()) {
+            return;
+        }
+        mobileHtml5DndPolyfillLoaded = true;
+
+        String vaadinLocation = getSession().getService().getStaticFileLocation(
+                VaadinService.getCurrentRequest()) + "/VAADIN/";
+
+        getPage().addDependency(new Dependency(Type.JAVASCRIPT,
+                vaadinLocation + ApplicationConstants.MOBILE_DND_POLYFILL_JS));
+
+        getRpcProxy(PageClientRpc.class).initializeMobileHtml5DndPolyfill();
+    }
+
+    /**
+     * Event which is fired when the ordering of the windows is updated.
+     * <p>
+     * The other way to listen window position for specific window is
+     * {@link Window#addWindowOrderChangeListener(WindowOrderChangeListener)}
+     *
+     * @see Window.WindowOrderChangeEvent
+     *
+     * @author Vaadin Ltd
+     * @since 8.0
+     *
+     */
+    public static class WindowOrderUpdateEvent extends Component.Event {
+
+        private final Collection<Window> windows;
+
+        public WindowOrderUpdateEvent(Component source,
+                Collection<Window> windows) {
+            super(source);
+            this.windows = windows;
+        }
+
+        /**
+         * Gets the windows in the order they appear in the UI: top most window
+         * is first, bottom one last.
+         *
+         * @return the windows collection
+         */
+        public Collection<Window> getWindows() {
+            return windows;
+        }
+    }
+
+    /**
+     * An interface used for listening to Windows order update events.
+     *
+     * @since 8.0
+     *
+     * @see Window.WindowOrderChangeEvent
+     */
+    @FunctionalInterface
+    public interface WindowOrderUpdateListener extends ConnectorEventListener {
+
+        public static final Method windowOrderUpdateMethod = ReflectTools
+                .findMethod(WindowOrderUpdateListener.class,
+                        "windowOrderUpdated", WindowOrderUpdateEvent.class);
+
+        /**
+         * Called when the windows order positions are changed. Use
+         * {@link WindowOrderUpdateEvent#getWindows()} to get a reference to the
+         * {@link Window}s whose order positions are updated. Use
+         * {@link Window#getOrderPosition()} to get window position for specific
+         * window.
+         *
+         * @param event
+         */
+        public void windowOrderUpdated(WindowOrderUpdateEvent event);
     }
 }

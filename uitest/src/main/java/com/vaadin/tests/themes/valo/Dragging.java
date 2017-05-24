@@ -44,9 +44,9 @@ import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
 import com.vaadin.ui.MenuBar.MenuItem;
-import com.vaadin.ui.themes.ValoTheme;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.themes.ValoTheme;
 
 /**
  *
@@ -58,8 +58,6 @@ public class Dragging extends VerticalLayout implements View {
     SortableLayout sample;
 
     public Dragging() {
-        setMargin(true);
-        setSpacing(true);
 
         Label h1 = new Label("Dragging Components");
         h1.addStyleName(ValoTheme.LABEL_H1);
@@ -152,6 +150,8 @@ public class Dragging extends VerticalLayout implements View {
         components.add(documentLayout);
 
         final VerticalLayout buttonLayout = new VerticalLayout();
+        buttonLayout.setSpacing(false);
+        buttonLayout.setMargin(false);
         final Button button = new Button("Button");
         button.addClickListener(new Button.ClickListener() {
             @Override
@@ -238,6 +238,7 @@ public class Dragging extends VerticalLayout implements View {
         public SortableLayout() {
             layout = new HorizontalLayout();
             layout.setMargin(true);
+            layout.setSpacing(false);
             dropHandler = new ReorderLayoutDropHandler(layout);
 
             // final DragAndDropWrapper pane = new DragAndDropWrapper(layout);

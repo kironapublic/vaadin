@@ -8,13 +8,13 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 
 import com.vaadin.testbench.By;
-import com.vaadin.testbench.customelements.AbstractDateFieldElement;
-import com.vaadin.testbench.customelements.ComboBoxElement;
-import com.vaadin.testbench.customelements.FixedNotificationElement;
-import com.vaadin.testbench.customelements.TableElement;
-import com.vaadin.testbench.customelements.WindowElement;
 import com.vaadin.testbench.elements.ButtonElement;
+import com.vaadin.testbench.elements.ComboBoxElement;
+import com.vaadin.testbench.elements.DateFieldElement;
+import com.vaadin.testbench.elements.NotificationElement;
 import com.vaadin.testbench.elements.TabSheetElement;
+import com.vaadin.testbench.elements.TableElement;
+import com.vaadin.testbench.elements.WindowElement;
 import com.vaadin.testbench.parallel.BrowserUtil;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
@@ -129,8 +129,9 @@ public abstract class ThemeTest extends MultiBrowserTest {
     private void testNotification(int id, String identifier)
             throws IOException {
         $(ButtonElement.class).id("notifButt" + id).click();
+        waitForElementPresent(By.className("v-Notification"));
         compareScreen(identifier);
-        $(FixedNotificationElement.class).first().close();
+        $(NotificationElement.class).first().close();
     }
 
     protected void testWindows() throws IOException {
@@ -187,13 +188,13 @@ public abstract class ThemeTest extends MultiBrowserTest {
 
     private void testDates() throws IOException {
         compareScreen("dates");
-        $(AbstractDateFieldElement.class).id("datefield0").openPopup();
+        $(DateFieldElement.class).id("datefield0").openPopup();
         compareScreen("dates-first-popup");
-        $(AbstractDateFieldElement.class).id("datefield1").openPopup();
+        $(DateFieldElement.class).id("datefield1").openPopup();
         compareScreen("dates-second-popup");
-        $(AbstractDateFieldElement.class).id("datefield2").openPopup();
+        $(DateFieldElement.class).id("datefield2").openPopup();
         compareScreen("dates-third-popup");
-        $(AbstractDateFieldElement.class).id("datefield3").openPopup();
+        $(DateFieldElement.class).id("datefield3").openPopup();
         compareScreen("dates-fourth-popup");
     }
 }

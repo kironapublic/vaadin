@@ -73,6 +73,11 @@ public class Image extends AbstractEmbedded {
         return (ImageState) super.getState();
     }
 
+    @Override
+    protected ImageState getState(boolean markAsDirty) {
+        return (ImageState) super.getState(markAsDirty);
+    }
+
     /**
      * Add a click listener to the component. The listener is called whenever
      * the user clicks inside the component. Depending on the content the event
@@ -83,12 +88,11 @@ public class Image extends AbstractEmbedded {
      * @param listener
      *            The listener to add, not null
      * @return a registration object for removing the listener
+     * @since 8.0
      */
     public Registration addClickListener(ClickListener listener) {
-        addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class, listener,
-                ClickListener.clickMethod);
-        return () -> removeListener(EventId.CLICK_EVENT_IDENTIFIER,
-                ClickEvent.class, listener);
+        return addListener(EventId.CLICK_EVENT_IDENTIFIER, ClickEvent.class,
+                listener, ClickListener.clickMethod);
     }
 
     /**
@@ -97,7 +101,7 @@ public class Image extends AbstractEmbedded {
      *
      * @param listener
      *            The listener to remove
-     * 
+     *
      * @deprecated As of 8.0, replaced by {@link Registration#remove()} in the
      *             registration object returned from
      *             {@link #addClickListener(ClickListener)}.

@@ -2,7 +2,7 @@ package com.vaadin.tests.components.table;
 
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.shared.MouseEventDetails;
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.tests.components.AbstractReindeerTestUI;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Window;
@@ -14,8 +14,7 @@ public class HeaderRightClickAfterDrag extends AbstractReindeerTestUI {
     @Override
     protected void setup(VaadinRequest request) {
         Table table = new Table();
-        table.setContainerDataSource(
-                new BeanItemContainer<>(TestBean.class));
+        table.setContainerDataSource(new BeanItemContainer<>(TestBean.class));
         for (int i = 0; i < 10; i++) {
             table.addItem(new TestBean(i));
         }

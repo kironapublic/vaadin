@@ -43,7 +43,7 @@ import com.vaadin.event.ContextClickEvent.ContextClickListener;
 import com.vaadin.event.ContextClickEvent.ContextClickNotifier;
 import com.vaadin.event.ShortcutListener;
 import com.vaadin.server.AbstractClientConnector;
-import com.vaadin.server.AbstractErrorMessage.ContentMode;
+import com.vaadin.server.ClientConnector;
 import com.vaadin.server.ComponentSizeValidator;
 import com.vaadin.server.ErrorMessage;
 import com.vaadin.server.ErrorMessage.ErrorLevel;
@@ -62,6 +62,7 @@ import com.vaadin.shared.EventId;
 import com.vaadin.shared.MouseEventDetails;
 import com.vaadin.shared.Registration;
 import com.vaadin.shared.ui.ComponentStateUtil;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.util.SharedUtil;
 import com.vaadin.ui.declarative.DesignAttributeHandler;
 import com.vaadin.ui.declarative.DesignContext;
@@ -289,13 +290,6 @@ public abstract class AbstractComponent extends AbstractClientConnector
         return getState(false).caption;
     }
 
-    /**
-     * Sets the component's caption <code>String</code>. Caption is the visible
-     * name of the component.
-     *
-     * @param caption
-     *            the new caption <code>String</code> for the component.
-     */
     @Override
     public void setCaption(String caption) {
         getState().caption = caption;
@@ -489,18 +483,35 @@ public abstract class AbstractComponent extends AbstractClientConnector
 
     /**
      * Sets the component's description. See {@link #getDescription()} for more
-     * information on what the description is. This method will trigger a
-     * {@link RepaintRequestEvent}.
+     * information on what the description is.
      *
-     * The description is displayed as HTML in tooltips or directly in certain
+     * @see #setDescription(String, ContentMode)
+     * @param description
+     *            the new description string for the component.
+     */
+    public void setDescription(String description) {
+        setDescription(description, ContentMode.PREFORMATTED);
+    }
+
+    /**
+     * Sets the component's description using given content {@code mode}. See
+     * {@link #getDescription()} for more information on what the description
+     * is.
+     * <p>
+     * If the content {@code mode} is {@literal ContentMode.HTML} the
+     * description is displayed as HTML in tooltips or directly in certain
      * components so care should be taken to avoid creating the possibility for
      * HTML injection and possibly XSS vulnerabilities.
      *
      * @param description
      *            the new description string for the component.
+     * @param mode
+     *            the content mode for the description
+     * @since 8.0
      */
-    public void setDescription(String description) {
+    public void setDescription(String description, ContentMode mode) {
         getState().description = description;
+        getState().descriptionContentMode = mode;
     }
 
     /*
@@ -524,6 +535,8 @@ public abstract class AbstractComponent extends AbstractClientConnector
                     getClass().getName() + " already has a parent.");
         }
 
+        ClientConnector oldParent = getParent();
+
         // Send a detach event if the component is currently attached
         if (isAttached()) {
             detach();
@@ -535,6 +548,10 @@ public abstract class AbstractComponent extends AbstractClientConnector
         // Send attach event if the component is now attached
         if (isAttached()) {
             attach();
+        }
+
+        if (oldParent != null) {
+            oldParent.markAsDirty();
         }
     }
 
@@ -730,8 +747,7 @@ public abstract class AbstractComponent extends AbstractClientConnector
      */
     @Override
     public Registration addListener(Component.Listener listener) {
-        addListener(Component.Event.class, listener, COMPONENT_EVENT_METHOD);
-        return () -> removeListener(Component.Event.class, listener,
+        return addListener(Component.Event.class, listener,
                 COMPONENT_EVENT_METHOD);
     }
 
@@ -951,7 +967,8 @@ public abstract class AbstractComponent extends AbstractClientConnector
         readSize(attr);
         // handle component error
         if (attr.hasKey("error")) {
-            UserError error = new UserError(attr.get("error"), ContentMode.HTML,
+            UserError error = new UserError(attr.get("error"),
+                    com.vaadin.server.AbstractErrorMessage.ContentMode.HTML,
                     ErrorLevel.ERROR);
             setComponentError(error);
         }
@@ -1092,8 +1109,6 @@ public abstract class AbstractComponent extends AbstractClientConnector
      *
      * @param attributes
      *            the design attributes
-     * @param defaultInstance
-     *            instance of the class that has default sizing.
      */
     private void readSize(Attributes attributes) {
         // read width
@@ -1122,8 +1137,6 @@ public abstract class AbstractComponent extends AbstractClientConnector
      * Writes the size related attributes for the component if they differ from
      * the defaults
      *
-     * @param component
-     *            the component
      * @param attributes
      *            the attribute map where the attribute are written
      * @param defaultInstance
@@ -1229,9 +1242,10 @@ public abstract class AbstractComponent extends AbstractClientConnector
 
     /**
      * Returns a collection of attributes that should not be handled by the
-     * basic implementation of the {@link readDesign} and {@link writeDesign}
-     * methods. Typically these are handled in a custom way in the overridden
-     * versions of the above methods
+     * basic implementation of the {@link #readDesign(Element, DesignContext)}
+     * and {@link #writeDesign(Element, DesignContext)} methods. Typically these
+     * are handled in a custom way in the overridden versions of the above
+     * methods
      *
      * @since 7.4
      *
@@ -1375,15 +1389,13 @@ public abstract class AbstractComponent extends AbstractClientConnector
         // connector can override this and use a different RPC channel.
         if (getRpcManager(ContextClickRpc.class.getName()) == null) {
             registerRpc((ContextClickRpc) (MouseEventDetails details) -> {
-                fireEvent(new ContextClickEvent(AbstractComponent.this,
-                    details));
+                fireEvent(
+                        new ContextClickEvent(AbstractComponent.this, details));
             });
         }
 
-        addListener(EventId.CONTEXT_CLICK, ContextClickEvent.class, listener,
-                ContextClickEvent.CONTEXT_CLICK_METHOD);
-        return () -> removeListener(EventId.CONTEXT_CLICK,
-                ContextClickEvent.class, listener);
+        return addListener(EventId.CONTEXT_CLICK, ContextClickEvent.class,
+                listener, ContextClickEvent.CONTEXT_CLICK_METHOD);
     }
 
     @Override
@@ -1409,6 +1421,7 @@ public abstract class AbstractComponent extends AbstractClientConnector
      * @param visible
      *            <code>true</code> to make the required indicator visible,
      *            <code>false</code> if not
+     * @since 8.0
      */
     protected void setRequiredIndicatorVisible(boolean visible) {
         if (getState(false) instanceof AbstractFieldState) {
@@ -1432,6 +1445,7 @@ public abstract class AbstractComponent extends AbstractClientConnector
      *
      * @return <code>true</code> if visible, <code>false</code> if not
      * @see #setRequiredIndicatorVisible(boolean)
+     * @since 8.0
      */
     protected boolean isRequiredIndicatorVisible() {
         if (getState(false) instanceof AbstractFieldState) {

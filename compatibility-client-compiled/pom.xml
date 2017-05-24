@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.vaadin</groupId>
         <artifactId>vaadin-root</artifactId>
-        <version>8.0-SNAPSHOT</version>
+        <version>8.1-SNAPSHOT</version>
     </parent>
     <artifactId>vaadin-compatibility-client-compiled</artifactId>
     <name>vaadin-compatibility-client-compiled</name>
@@ -15,6 +15,8 @@
         <widgetset.name>com.vaadin.v7.Vaadin7WidgetSet</widgetset.name>
         <widgetset.style>OBF</widgetset.style>
         <widgetset.local.workers>6</widgetset.local.workers>
+        <!-- These files are directly from Vaadin 7 -->
+        <sonar.skip>true</sonar.skip>
     </properties>
 
     <url>https://vaadin.com/</url>
@@ -48,40 +50,19 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.cmpn</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>generate-export-package</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <classpathScope>compile</classpathScope>
-                            <executable>${java.home}/bin/java</executable>
-                            <arguments>
-                                <argument>-Dvaadin.version=${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</argument>
-                                <argument>-DincludeNumberPackages=1</argument>
-
-                                <argument>-classpath</argument>
-                                <classpath />
-
-                                <argument>com.vaadin.buildhelpers.GeneratePackageExports</argument>
-
-                                <argument>${project.build.directory}/${project.build.finalName}.${project.packaging}</argument>
-                                <argument>VAADIN/widgetsets</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>com.vaadin</groupId>
                 <artifactId>vaadin-maven-plugin</artifactId>
@@ -102,32 +83,10 @@
                     </execution>
                 </executions>
             </plugin>
-
-
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-Version>${osgi.bundle.version}</Bundle-Version>
-                        <Bundle-RequiredExecutionEnvironment>${osgi.execution.environment}</Bundle-RequiredExecutionEnvironment>
-                        <!-- Export package is handled in exec plugin -->
-                        <Export-Package></Export-Package>
-                        <Import-Package></Import-Package>
-                    </instructions>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>bundle-manifest</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>manifest</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-maven-plugin</artifactId>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>

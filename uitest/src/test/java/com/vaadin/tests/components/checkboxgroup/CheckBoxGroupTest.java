@@ -21,8 +21,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -30,8 +32,8 @@ import org.junit.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
-import com.vaadin.server.FontAwesome;
-import com.vaadin.testbench.customelements.CheckBoxGroupElement;
+import com.vaadin.icons.VaadinIcons;
+import com.vaadin.testbench.elements.CheckBoxGroupElement;
 import com.vaadin.tests.components.checkbox.CheckBoxGroupTestUI;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
@@ -55,13 +57,36 @@ public class CheckBoxGroupTest extends MultiBrowserTest {
 
     @Test
     public void initialItems_reduceItemCount_containsCorrectItems() {
-        selectMenuPath("Component", "Data source", "Items", "5");
+        selectMenuPath("Component", "Data provider", "Items", "5");
+        assertItems(5);
+    }
+
+    @Test
+    public void disabled_reduceItemCount_containsCorrectItems() {
+        selectMenuPath("Component", "State", "Enabled");
+        selectMenuPath("Component", "Data provider", "Items", "5");
         assertItems(5);
     }
 
     @Test
     public void initialItems_increaseItemCount_containsCorrectItems() {
-        selectMenuPath("Component", "Data source", "Items", "100");
+        selectMenuPath("Component", "Data provider", "Items", "100");
+        assertItems(100);
+    }
+
+    @Test
+    public void disabled_increaseItemCountWithinPushRows_containsCorrectItems() {
+        selectMenuPath("Component", "Data provider", "Items", "5");
+        selectMenuPath("Component", "State", "Enabled");
+        selectMenuPath("Component", "Data provider", "Items", "20");
+        assertItems(20);
+    }
+
+    @Test
+    public void disabled_increaseItemCountBeyondPushRows_containsCorrectItems() {
+        selectMenuPath("Component", "Data provider", "Items", "5");
+        selectMenuPath("Component", "State", "Enabled");
+        selectMenuPath("Component", "Data provider", "Items", "100");
         assertItems(100);
     }
 
@@ -143,9 +168,10 @@ public class CheckBoxGroupTest extends MultiBrowserTest {
                 "Use Item Icon Generator");
         assertItemSuffices(20);
         List<WebElement> icons = getSelect()
-                .findElements(By.cssSelector(".v-icon.FontAwesome"));
+                .findElements(By.cssSelector(".v-select-optiongroup .v-icon"));
+        Assert.assertTrue(icons.size() > 0);
         for (int i = 0; i < icons.size(); i++) {
-            Assert.assertEquals(FontAwesome.values()[i + 1].getCodepoint(),
+            Assert.assertEquals(VaadinIcons.values()[i + 1].getCodepoint(),
                     icons.get(i).getText().charAt(0));
         }
     }
@@ -171,7 +197,7 @@ public class CheckBoxGroupTest extends MultiBrowserTest {
 
     private void assertSelected(String... expectedSelection) {
         Assert.assertEquals(Arrays.asList(expectedSelection),
-                getSelect().getSelection());
+                getSelect().getValue());
     }
 
     @Override
@@ -207,7 +233,9 @@ public class CheckBoxGroupTest extends MultiBrowserTest {
 
     @Test
     public void testDisabled() {
-        List<String> optionsCssClasses = getSelect().getOptionsCssClasses();
+        List<String> optionsCssClasses = getSelect().getOptionElements()
+                .stream().map(e -> e.getAttribute("class"))
+                .collect(Collectors.toList());
         for (int i = 0; i < optionsCssClasses.size(); i++) {
             String cssClassList = optionsCssClasses.get(i);
             if (i == 10) {
@@ -222,7 +250,15 @@ public class CheckBoxGroupTest extends MultiBrowserTest {
 
     @Test
     public void testIconUrl() {
-        List<String> optionsIcons = getSelect().getOptionsIconUrls();
+        List<String> optionsIcons = new ArrayList<>();
+        for (WebElement option : getSelect().getOptionElements()) {
+            List<WebElement> images = option.findElements(By.tagName("img"));
+            if (images.size() > 0) {
+                optionsIcons.add(images.get(0).getAttribute("src"));
+            } else {
+                optionsIcons.add(null);
+            }
+        }
         for (int i = 0; i < optionsIcons.size(); i++) {
             String icon = optionsIcons.get(i);
             if (i == 2) {

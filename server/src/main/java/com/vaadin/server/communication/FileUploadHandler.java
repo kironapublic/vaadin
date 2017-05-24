@@ -36,6 +36,7 @@ import com.vaadin.server.UploadException;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinResponse;
 import com.vaadin.server.VaadinSession;
+import com.vaadin.shared.ApplicationConstants;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.Upload.FailedEvent;
 
@@ -655,7 +656,7 @@ public class FileUploadHandler implements RequestHandler {
      * Removes any possible path information from the filename and returns the
      * filename. Separators / and \\ are used.
      *
-     * @param name
+     * @param filename
      * @return
      */
     private static String removePath(String filename) {
@@ -675,10 +676,11 @@ public class FileUploadHandler implements RequestHandler {
      */
     protected void sendUploadResponse(VaadinRequest request,
             VaadinResponse response) throws IOException {
-        response.setContentType("text/html");
+        response.setContentType(
+                ApplicationConstants.CONTENT_TYPE_TEXT_HTML_UTF_8);
         try (OutputStream out = response.getOutputStream()) {
             final PrintWriter outWriter = new PrintWriter(
-                new BufferedWriter(new OutputStreamWriter(out, "UTF-8")));
+                    new BufferedWriter(new OutputStreamWriter(out, "UTF-8")));
             outWriter.print("<html><body>download handled</body></html>");
             outWriter.flush();
         }
@@ -687,8 +689,8 @@ public class FileUploadHandler implements RequestHandler {
     private void cleanStreamVariable(VaadinSession session, final UI ui,
             final ClientConnector owner, final String variableName) {
         session.accessSynchronously(() -> {
-            ui.getConnectorTracker().cleanStreamVariable(
-                owner.getConnectorId(), variableName);
+            ui.getConnectorTracker().cleanStreamVariable(owner.getConnectorId(),
+                    variableName);
         });
     }
 }

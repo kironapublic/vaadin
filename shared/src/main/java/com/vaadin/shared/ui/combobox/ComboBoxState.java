@@ -60,7 +60,7 @@ public class ComboBoxState extends AbstractSingleSelectState {
      * itself.
      */
     @DelegateToWidget
-    public String suggestionPopupWidth = null;
+    public String suggestionPopupWidth = "100%";
 
     /**
      * True to allow the user to send new items to the server, false to only
@@ -87,5 +87,17 @@ public class ComboBoxState extends AbstractSingleSelectState {
      * selected.
      */
     public String selectedItemCaption;
+
+    /**
+     * Caption for item which represents empty selection.
+     */
+    public String emptySelectionCaption = "";
+
+    /**
+     * Selected item icon uri.
+     *
+     * @since 8.0
+     */
+    public String selectedItemIcon;
 
 }

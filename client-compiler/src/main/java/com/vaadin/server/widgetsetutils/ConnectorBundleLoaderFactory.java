@@ -58,6 +58,7 @@ import com.vaadin.client.metadata.TypeData;
 import com.vaadin.client.metadata.TypeDataStore;
 import com.vaadin.client.metadata.TypeDataStore.MethodAttribute;
 import com.vaadin.client.ui.UnknownComponentConnector;
+import com.vaadin.client.ui.UnknownExtensionConnector;
 import com.vaadin.server.widgetsetutils.metadata.ClientRpcVisitor;
 import com.vaadin.server.widgetsetutils.metadata.ConnectorBundle;
 import com.vaadin.server.widgetsetutils.metadata.ConnectorInitVisitor;
@@ -78,6 +79,7 @@ import com.vaadin.shared.ui.Connect.LoadStyle;
 import com.vaadin.tools.CvalAddonsChecker;
 import com.vaadin.tools.CvalChecker;
 import com.vaadin.tools.CvalChecker.InvalidCvalException;
+import com.vaadin.tools.ReportUsage;
 
 public class ConnectorBundleLoaderFactory extends Generator {
     /**
@@ -217,6 +219,10 @@ public class ConnectorBundleLoaderFactory extends Generator {
             return Collections.unmodifiableList(methodNames);
         }
 
+    }
+
+    static {
+        ReportUsage.checkForUpdatesInBackgroundThread();
     }
 
     private CvalAddonsChecker cvalChecker = new CvalAddonsChecker();
@@ -1123,6 +1129,8 @@ public class ConnectorBundleLoaderFactory extends Generator {
                 connectorsByLoadStyle.get(LoadStyle.EAGER));
         eagerBundle.processType(eagerLogger, typeOracle
                 .findType(UnknownComponentConnector.class.getCanonicalName()));
+        eagerBundle.processType(eagerLogger, typeOracle
+                .findType(UnknownExtensionConnector.class.getCanonicalName()));
         eagerBundle.processSubTypes(eagerLogger,
                 typeOracle.getType(ClientRpc.class.getName()));
         eagerBundle.processSubTypes(eagerLogger,
@@ -1148,6 +1156,12 @@ public class ConnectorBundleLoaderFactory extends Generator {
             bundle.processType(subLogger, type);
 
             bundles.add(bundle);
+        }
+
+        Collection<JClassType> none = connectorsByLoadStyle.get(LoadStyle.NONE);
+        for (JClassType type : none) {
+            logger.log(Type.TRACE,
+                    "Ignoring " + type.getName() + " with LoadStyle.NONE");
         }
 
         return bundles;

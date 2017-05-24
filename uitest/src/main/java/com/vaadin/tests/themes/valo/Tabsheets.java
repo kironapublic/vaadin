@@ -26,22 +26,21 @@ import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.TabSheet.SelectedTabChangeEvent;
 import com.vaadin.ui.TabSheet.SelectedTabChangeListener;
 import com.vaadin.ui.TabSheet.Tab;
-import com.vaadin.ui.themes.ValoTheme;
 import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.themes.ValoTheme;
 
 public class Tabsheets extends VerticalLayout implements View {
 
     TabSheet tabs;
 
     public Tabsheets() {
-        setMargin(true);
+        setSpacing(false);
 
         Label h1 = new Label("Tabs");
         h1.addStyleName(ValoTheme.LABEL_H1);
         addComponent(h1);
 
         HorizontalLayout wrap = new HorizontalLayout();
-        wrap.setSpacing(true);
         wrap.addStyleName(ValoTheme.LAYOUT_HORIZONTAL_WRAPPING);
         addComponent(wrap);
 
@@ -65,7 +64,6 @@ public class Tabsheets extends VerticalLayout implements View {
         addComponent(h3);
 
         wrap = new HorizontalLayout();
-        wrap.setSpacing(true);
         wrap.addStyleName(ValoTheme.LAYOUT_HORIZONTAL_WRAPPING);
         wrap.setMargin(new MarginInfo(false, false, true, false));
         addComponent(wrap);
@@ -143,8 +141,6 @@ public class Tabsheets extends VerticalLayout implements View {
                     ? sg.nextString(true) + " " + sg.nextString(false) : null;
 
             VerticalLayout content = new VerticalLayout();
-            content.setMargin(true);
-            content.setSpacing(true);
             content.addComponent(new Label("Content for tab " + i));
             if (i == 2) {
                 content.addComponent(new Label(

@@ -33,7 +33,7 @@ public class HorizontalLayout extends AbstractOrderedLayout {
      * Constructs an empty HorizontalLayout.
      */
     public HorizontalLayout() {
-
+        setSpacing(true);
     }
 
     /**
@@ -53,6 +53,38 @@ public class HorizontalLayout extends AbstractOrderedLayout {
     @Override
     protected HorizontalLayoutState getState() {
         return (HorizontalLayoutState) super.getState();
+    }
+
+    @Override
+    protected HorizontalLayoutState getState(boolean markAsDirty) {
+        return (HorizontalLayoutState) super.getState(markAsDirty);
+    }
+
+    /**
+     * Adds the given components to this layout and sets them as expanded. The
+     * width of all added child components are set to 100% so that the expansion
+     * will be effective. The width of this layout is also set to 100% if it is
+     * currently undefined.
+     * <p>
+     * The components are added in the provided order to the end of this layout.
+     * Any components that are already children of this layout will be moved to
+     * new positions.
+     *
+     * @param components
+     *            the components to set, not <code>null</code>
+     * @since 8.0
+     */
+    public void addComponentsAndExpand(Component... components) {
+        addComponents(components);
+
+        if (getWidth() < 0) {
+            setWidth(100, Unit.PERCENTAGE);
+        }
+
+        for (Component child : components) {
+            child.setWidth(100, Unit.PERCENTAGE);
+            setExpandRatio(child, 1);
+        }
     }
 
 }

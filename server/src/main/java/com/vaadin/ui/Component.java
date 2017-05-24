@@ -47,8 +47,8 @@ import com.vaadin.ui.declarative.DesignContext;
  *
  * <p>
  * The {@link #getParent()} method allows retrieving the parent component of a
- * component. While there is a {@link #setParent(Component) setParent()}, you
- * rarely need it as you normally add components with the
+ * component. While there is a {@link #setParent(HasComponents)}, you rarely
+ * need it as you normally add components with the
  * {@link ComponentContainer#addComponent(Component) addComponent()} method of
  * the layout or other {@code ComponentContainer}, which automatically sets the
  * parent.
@@ -183,8 +183,6 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * style names defined in Vaadin or GWT can not be removed.
      * </p>
      *
-     * * This method will trigger a {@link RepaintRequestEvent}.
-     *
      * @param style
      *            the style name or style names to be removed
      * @see #getStyleName()
@@ -260,12 +258,6 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * disabled.setEnabled(false);
      * layout.addComponent(disabled);
      * </pre>
-     *
-     * <p>
-     * This method will trigger a {@link RepaintRequestEvent} for the component
-     * and, if it is a {@link ComponentContainer}, for all its children
-     * recursively.
-     * </p>
      *
      * @param enabled
      *            a boolean value specifying if the component should be enabled
@@ -426,11 +418,6 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * display it inside the component.
      * </p>
      *
-     * <p>
-     * This method will trigger a {@link RepaintRequestEvent}. A
-     * reimplementation should call the superclass implementation.
-     * </p>
-     *
      * @param caption
      *            the new caption for the component. If the caption is
      *            {@code null}, no caption is shown and it does not normally
@@ -498,8 +485,6 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * {@code v-caption} .
      * </p>
      *
-     * This method will trigger a {@link RepaintRequestEvent}.
-     *
      * @param icon
      *            the icon of the component. If null, no icon is shown and it
      *            does not normally take any space.
@@ -528,10 +513,9 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * <p>
      * Reimplementing the {@code attach()} method is useful for tasks that need
      * to get a reference to the parent, window, or application object with the
-     * {@link #getParent()}, {@link #getUI()}, and {@link #getSession()}
-     * methods. A component does not yet know these objects in the constructor,
-     * so in such case, the methods will return {@code null}. For example, the
-     * following is invalid:
+     * {@link #getParent()} and {@link #getUI()} methods. A component does not
+     * yet know these objects in the constructor, so in such case, the methods
+     * will return {@code null}. For example, the following is invalid:
      * </p>
      *
      * <pre>
@@ -552,7 +536,7 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * component from a container triggers calling the {@link #detach()} method.
      * If the parent of an added component is already connected to the
      * application, the {@code attach()} is called immediately from
-     * {@link #setParent(Component)}.
+     * {@link #setParent(HasComponents)}.
      * </p>
      *
      * <pre>
@@ -632,17 +616,17 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * <td width=120><b>Example</b></td>
      * </tr>
      * <tr>
-     * <td>&lt;b></td>
+     * <td>&lt;b&gt;</td>
      * <td>bold</td>
      * <td><b>bold text</b></td>
      * </tr>
      * <tr>
-     * <td>&lt;i></td>
+     * <td>&lt;i&gt;</td>
      * <td>italic</td>
      * <td><i>italic text</i></td>
      * </tr>
      * <tr>
-     * <td>&lt;u></td>
+     * <td>&lt;u&gt;</td>
      * <td>underlined</td>
      * <td><u>underlined text</u></td>
      * </tr>
@@ -652,10 +636,10 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * <td>N/A</td>
      * </tr>
      * <tr>
-     * <td>&lt;ul><br>
-     * &lt;li>item1<br>
-     * &lt;li>item1<br>
-     * &lt;/ul></td>
+     * <td>&lt;ul&gt;<br>
+     * &lt;li&gt;item1<br>
+     * &lt;li&gt;item1<br>
+     * &lt;/ul&gt;</td>
      * <td>item list</td>
      * <td>
      * <ul>
@@ -916,6 +900,7 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
      * @return a registration object for removing this listener
      * @see Component.Event
      * @see Registration
+     * @since 8.0
      */
     public Registration addListener(Component.Listener listener);
 
@@ -1015,8 +1000,8 @@ public interface Component extends ClientConnector, Sizeable, Serializable {
          * <p>
          * Notice that this interface does not provide an accessor that would
          * allow finding out the currently focused component. Focus information
-         * can be acquired for some (but not all) {@code LegacyField} components
-         * through the {@link com.vaadin.event.FieldEvents.FocusListener} and
+         * can be acquired for some (but not all) components through the
+         * {@link com.vaadin.event.FieldEvents.FocusListener} and
          * {@link com.vaadin.event.FieldEvents.BlurListener} interfaces.
          * </p>
          *

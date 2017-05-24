@@ -20,12 +20,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.GWT;
-import com.vaadin.client.communication.HasJavaScriptConnectorHelper;
 import com.vaadin.client.metadata.BundleLoadCallback;
 import com.vaadin.client.metadata.ConnectorBundleLoader;
 import com.vaadin.client.metadata.NoDataException;
 import com.vaadin.client.metadata.TypeData;
 import com.vaadin.client.ui.UnknownComponentConnector;
+import com.vaadin.client.ui.UnknownExtensionConnector;
 
 public class WidgetSet {
     /**
@@ -55,33 +55,40 @@ public class WidgetSet {
         Class<? extends ServerConnector> classType = resolveInheritedConnectorType(
                 conf, tag);
 
-        if (classType == null || classType == UnknownComponentConnector.class) {
-            String serverSideName = conf.getUnknownServerClassNameByTag(tag);
-            UnknownComponentConnector c = GWT
-                    .create(UnknownComponentConnector.class);
-            c.setServerSideClassName(serverSideName);
-            Profiler.leave("WidgetSet.createConnector");
-            return c;
-        } else {
-            /*
-             * let the auto generated code instantiate this type
-             */
-            try {
+        try {
+            if (classType == null
+                    || classType == UnknownComponentConnector.class
+                    || classType == UnknownExtensionConnector.class) {
+                String serverSideName = conf
+                        .getUnknownServerClassNameByTag(tag);
+                if (classType == UnknownExtensionConnector.class) {
+                    // Display message in the console for non-visual connectors
+                    getLogger().severe(UnknownComponentConnector
+                            .createMessage(serverSideName));
+                    return GWT.create(UnknownExtensionConnector.class);
+                } else {
+                    UnknownComponentConnector c = GWT
+                            .create(UnknownComponentConnector.class);
+                    // Set message to be shown in a widget for visual connectors
+                    c.setServerSideClassName(serverSideName);
+                    return c;
+                }
+            } else {
+                /*
+                 * let the auto generated code instantiate this type
+                 */
                 ServerConnector connector = (ServerConnector) TypeData
                         .getType(classType).createInstance();
-                if (connector instanceof HasJavaScriptConnectorHelper) {
-                    ((HasJavaScriptConnectorHelper) connector)
-                            .getJavascriptConnectorHelper().setTag(tag);
-                }
-                Profiler.leave("WidgetSet.createConnector");
+                connector.setTag(tag);
                 return connector;
-            } catch (NoDataException e) {
-                Profiler.leave("WidgetSet.createConnector");
-                throw new IllegalStateException(
-                        "There is no information about " + classType
-                                + ". Did you remember to compile the right widgetset?",
-                        e);
             }
+        } catch (NoDataException e) {
+            throw new IllegalStateException(
+                    "There is no information about " + classType
+                            + ". Did you remember to compile the right widgetset?",
+                    e);
+        } finally {
+            Profiler.leave("WidgetSet.createConnector");
         }
     }
 

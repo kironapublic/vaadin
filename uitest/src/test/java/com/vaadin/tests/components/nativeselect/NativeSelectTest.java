@@ -21,7 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.vaadin.testbench.TestBenchElement;
-import com.vaadin.testbench.customelements.NativeSelectElement;
+import com.vaadin.testbench.elements.NativeSelectElement;
 import com.vaadin.testbench.elements.AbstractComponentElement.ReadOnlyException;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
@@ -39,13 +39,13 @@ public class NativeSelectTest extends MultiBrowserTest {
 
     @Test
     public void initialItems_reduceItemCount_containsCorrectItems() {
-        selectMenuPath("Component", "Data source", "Items", "5");
+        selectMenuPath("Component", "Data provider", "Items", "5");
         assertItems(5);
     }
 
     @Test
     public void initialItems_increaseItemCount_containsCorrectItems() {
-        selectMenuPath("Component", "Data source", "Items", "100");
+        selectMenuPath("Component", "Data provider", "Items", "100");
         assertItems(100);
     }
 

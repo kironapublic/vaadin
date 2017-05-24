@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2000-2016 Vaadin Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -21,7 +21,7 @@ import java.io.File;
 import com.vaadin.server.SystemError;
 import com.vaadin.server.VaadinService;
 import com.vaadin.server.VaadinSession;
-import com.vaadin.shared.ui.label.ContentMode;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.LegacyWindow;
 import com.vaadin.ui.Panel;

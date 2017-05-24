@@ -18,21 +18,26 @@ package com.vaadin.event;
 import java.io.Serializable;
 import java.util.List;
 
-import com.vaadin.data.sort.SortOrder;
+import com.vaadin.data.provider.DataProvider;
+import com.vaadin.data.provider.SortOrder;
+import com.vaadin.shared.Registration;
 import com.vaadin.ui.Component;
 
 /**
- * Event describing a change in sorting of a {@link Container}. Fired by
+ * Event describing a change in sorting of a {@link DataProvider}. Fired by
  * {@link SortNotifier SortNotifiers}.
  *
  * @see SortListener
+ * @see SortOrder
+ * @param <T>
+ *            the type of the sorting information
  *
- * @since 7.4
+ * @since 8.0
  * @author Vaadin Ltd
  */
-public class SortEvent extends Component.Event {
+public class SortEvent<T extends SortOrder<?>> extends Component.Event {
 
-    private final List<SortOrder> sortOrder;
+    private final List<T> sortOrder;
     private final boolean userOriginated;
 
     /**
@@ -46,7 +51,7 @@ public class SortEvent extends Component.Event {
      *            <code>true</code> if event is a result of user interaction,
      *            <code>false</code> if from API call
      */
-    public SortEvent(Component source, List<SortOrder> sortOrder,
+    public SortEvent(Component source, List<T> sortOrder,
             boolean userOriginated) {
         super(source);
         this.sortOrder = sortOrder;
@@ -58,7 +63,7 @@ public class SortEvent extends Component.Event {
      *
      * @return the sort order list
      */
-    public List<SortOrder> getSortOrder() {
+    public List<T> getSortOrder() {
         return sortOrder;
     }
 
@@ -73,38 +78,37 @@ public class SortEvent extends Component.Event {
 
     /**
      * Listener for sort order change events.
+     *
+     * @param <T>
+     *            the type of the sorting information
      */
-    public interface SortListener extends Serializable {
+    @FunctionalInterface
+    public interface SortListener<T extends SortOrder<?>> extends Serializable {
         /**
          * Called when the sort order has changed.
          *
          * @param event
          *            the sort order change event
          */
-        public void sort(SortEvent event);
+        public void sort(SortEvent<T> event);
     }
 
     /**
      * The interface for adding and removing listeners for {@link SortEvent
      * SortEvents}.
+     *
+     * @param <T>
+     *            the type of the sorting information
      */
-    public interface SortNotifier extends Serializable {
+    public interface SortNotifier<T extends SortOrder<?>> extends Serializable {
         /**
          * Adds a sort order change listener that gets notified when the sort
          * order changes.
          *
          * @param listener
          *            the sort order change listener to add
+         * @return a registration object for removing the listener
          */
-        public void addSortListener(SortListener listener);
-
-        /**
-         * Removes a sort order change listener previously added using
-         * {@link #addSortListener(SortListener)}.
-         *
-         * @param listener
-         *            the sort order change listener to remove
-         */
-        public void removeSortListener(SortListener listener);
+        public Registration addSortListener(SortListener<T> listener);
     }
 }

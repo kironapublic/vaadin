@@ -17,8 +17,8 @@ package com.vaadin.tests.themes.valo;
 
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
+import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.ui.MarginInfo;
-import com.vaadin.shared.ui.label.ContentMode;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Panel;
@@ -32,7 +32,7 @@ import com.vaadin.ui.themes.ValoTheme;
  */
 public class Labels extends VerticalLayout implements View {
     public Labels() {
-        setMargin(true);
+        setSpacing(false);
 
         Label h1 = new Label("Labels");
         h1.addStyleName(ValoTheme.LABEL_H1);
@@ -40,9 +40,11 @@ public class Labels extends VerticalLayout implements View {
 
         HorizontalLayout split = new HorizontalLayout();
         split.setWidth("100%");
+        split.setSpacing(false);
         addComponent(split);
 
         VerticalLayout left = new VerticalLayout();
+        left.setSpacing(false);
         left.setMargin(new MarginInfo(false, true, false, false));
         split.addComponent(left);
 
@@ -95,8 +97,6 @@ public class Labels extends VerticalLayout implements View {
         split.addComponent(p);
 
         VerticalLayout right = new VerticalLayout();
-        right.setSpacing(true);
-        right.setMargin(true);
         p.setContent(right);
 
         Label label = new Label(

@@ -18,7 +18,7 @@ package com.vaadin.tests.components.radiobutton;
 import java.util.LinkedHashMap;
 import java.util.stream.IntStream;
 
-import com.vaadin.server.FontAwesome;
+import com.vaadin.icons.VaadinIcons;
 import com.vaadin.tests.components.abstractlisting.AbstractListingTestUI;
 import com.vaadin.ui.ItemCaptionGenerator;
 import com.vaadin.ui.RadioButtonGroup;
@@ -51,7 +51,7 @@ public class RadioButtonGroupTestUI
     protected void createSelectionMenu() {
         createClickAction("Clear selection", selectionCategory,
                 (component, item, data) -> component.getSelectedItem()
-                        .ifPresent(component::deselect),
+                        .ifPresent(value -> component.setValue(null)),
                 "");
 
         Command<RadioButtonGroup<Object>, String> toggleSelection = (component,
@@ -71,11 +71,11 @@ public class RadioButtonGroupTestUI
             boolean activate, Object data) {
         if (activate) {
             group.setItemIconGenerator(
-                    item -> FontAwesome.values()[getIndex(item) + 1]);
+                    item -> VaadinIcons.values()[getIndex(item) + 1]);
         } else {
             group.setItemIconGenerator(item -> null);
         }
-        group.getDataSource().refreshAll();
+        group.getDataProvider().refreshAll();
     }
 
     private void createItemCaptionGeneratorMenu() {
@@ -88,15 +88,15 @@ public class RadioButtonGroupTestUI
         createSelectAction("Item Caption Generator", "Item Caption Generator",
                 options, "None", (radioButtonGroup, captionGenerator, data) -> {
                     radioButtonGroup.setItemCaptionGenerator(captionGenerator);
-                    radioButtonGroup.getDataSource().refreshAll();
+                    radioButtonGroup.getDataProvider().refreshAll();
                 }, true);
     }
 
     private void toggleSelection(String item) {
         if (getComponent().isSelected(item)) {
-            getComponent().deselect(item);
+            getComponent().setValue(null);
         } else {
-            getComponent().select(item);
+            getComponent().setValue(item);
         }
     }
 

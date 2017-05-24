@@ -15,16 +15,22 @@
  */
 package com.vaadin.client.ui.combobox;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.logging.Logger;
+
 import com.vaadin.client.Profiler;
 import com.vaadin.client.annotations.OnStateChange;
 import com.vaadin.client.communication.StateChangeEvent;
 import com.vaadin.client.connectors.AbstractListingConnector;
 import com.vaadin.client.connectors.data.HasDataSource;
+import com.vaadin.client.data.DataChangeHandler;
 import com.vaadin.client.data.DataSource;
 import com.vaadin.client.ui.HasErrorIndicator;
 import com.vaadin.client.ui.HasRequiredIndicator;
 import com.vaadin.client.ui.SimpleManagedLayout;
 import com.vaadin.client.ui.VComboBox;
+import com.vaadin.client.ui.VComboBox.ComboBoxSuggestion;
 import com.vaadin.client.ui.VComboBox.DataReceivedHandler;
 import com.vaadin.shared.EventId;
 import com.vaadin.shared.Registration;
@@ -73,6 +79,8 @@ public class ComboBoxConnector extends AbstractListingConnector
 
         getWidget().suggestionPopup.updateStyleNames(getState());
 
+        // TODO if the pop up is opened, the actual item should be removed from
+        // the popup (?)
         getWidget().nullSelectionAllowed = getState().emptySelectionAllowed;
         // TODO having this true would mean that the empty selection item comes
         // from the data source so none needs to be added - currently
@@ -84,13 +92,26 @@ public class ComboBoxConnector extends AbstractListingConnector
 
         getDataReceivedHandler().serverReplyHandled();
 
+        // all updates except options have been done
+        getWidget().initDone = true;
+
         Profiler.leave("ComboBoxConnector.onStateChanged update content");
     }
 
-    @OnStateChange({ "selectedItemKey", "selectedItemCaption" })
+    @OnStateChange("emptySelectionCaption")
+    private void onEmptySelectionCaptionChange() {
+        List<ComboBoxSuggestion> suggestions = getWidget().currentSuggestions;
+        if (!suggestions.isEmpty() && isFirstPage()) {
+            suggestions.remove(0);
+            addEmptySelectionItem();
+        }
+    }
+
+    @OnStateChange({ "selectedItemKey", "selectedItemCaption", "selectedItemIcon" })
     private void onSelectionChange() {
         getDataReceivedHandler().updateSelectionFromServer(
-                getState().selectedItemKey, getState().selectedItemCaption);
+                getState().selectedItemKey, getState().selectedItemCaption,
+                getState().selectedItemIcon);
     }
 
     @Override
@@ -152,11 +173,12 @@ public class ComboBoxConnector extends AbstractListingConnector
      * @param filter
      *            the current filter string
      */
-    public void setFilter(String filter) {
-        if (filter != getWidget().lastFilter) {
+    protected void setFilter(String filter) {
+        if (!Objects.equals(filter, getWidget().lastFilter)) {
             getDataReceivedHandler().clearPendingNavigation();
+
+            rpc.setFilter(filter);
         }
-        rpc.setFilter(filter);
     }
 
     /**
@@ -171,22 +193,27 @@ public class ComboBoxConnector extends AbstractListingConnector
      *            the page number to get or -1 to let the server/connector
      *            decide based on current selection (possibly loading more data
      *            from the server)
+     * @param filter
+     *            the filter to apply, never {@code null}
      */
-    public void requestPage(int page) {
+    public void requestPage(int page, String filter) {
+        setFilter(filter);
+
         if (page < 0) {
             if (getState().scrollToSelectedItem) {
-                getDataSource().ensureAvailability(0, 10000);
+                // TODO this should be optimized not to try to fetch everything
+                getDataSource().ensureAvailability(0, getDataSource().size());
                 return;
             } else {
                 page = 0;
             }
         }
-        int adjustment = getWidget().nullSelectionAllowed
-                && "".equals(getWidget().lastFilter) ? 1 : 0;
+        int adjustment = getWidget().nullSelectionAllowed && "".equals(filter)
+                ? 1 : 0;
         int startIndex = Math.max(0,
                 page * getWidget().pageLength - adjustment);
         int pageLength = getWidget().pageLength > 0 ? getWidget().pageLength
-                : 10000;
+                : getDataSource().size();
         getDataSource().ensureAvailability(startIndex, pageLength);
     }
 
@@ -249,80 +276,7 @@ public class ComboBoxConnector extends AbstractListingConnector
     public void setDataSource(DataSource<JsonObject> dataSource) {
         super.setDataSource(dataSource);
         dataChangeHandlerRegistration = dataSource
-                .addDataChangeHandler(range -> {
-                    // try to find selected item if requested
-                    if (getState().scrollToSelectedItem
-                            && getState().pageLength > 0
-                            && getWidget().currentPage < 0
-                            && getWidget().selectedOptionKey != null) {
-                        // search for the item with the selected key
-                        getWidget().currentPage = 0;
-                        for (int i = 0; i < getDataSource().size(); ++i) {
-                            JsonObject row = getDataSource().getRow(i);
-                            if (row != null) {
-                                String key = getRowKey(row);
-                                if (getWidget().selectedOptionKey.equals(key)) {
-                                    if (getWidget().nullSelectionAllowed) {
-                                        getWidget().currentPage = (i + 1)
-                                                / getState().pageLength;
-                                    } else {
-                                        getWidget().currentPage = i
-                                                / getState().pageLength;
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    } else if (getWidget().currentPage < 0) {
-                        getWidget().currentPage = 0;
-                    }
-
-                    getWidget().currentSuggestions.clear();
-
-                    int start = getWidget().currentPage
-                            * getWidget().pageLength;
-                    int end = getWidget().pageLength > 0
-                            ? start + getWidget().pageLength
-                            : getDataSource().size();
-
-                    if (getWidget().nullSelectionAllowed
-                            && "".equals(getWidget().lastFilter)) {
-                        // add special null selection item...
-                        if (getWidget().currentPage == 0) {
-                            getWidget().currentSuggestions
-                                    .add(getWidget().new ComboBoxSuggestion("",
-                                            "", null, null));
-                        } else {
-                            // ...or leave space for it
-                            start = start - 1;
-                        }
-                        // in either case, the last item to show is
-                        // shifted by one
-                        end = end - 1;
-                    }
-
-                    for (int i = start; i < end; ++i) {
-                        JsonObject row = getDataSource().getRow(i);
-
-                        if (row != null) {
-                            String key = getRowKey(row);
-                            String caption = row
-                                    .getString(DataCommunicatorConstants.NAME);
-                            String style = row
-                                    .getString(ComboBoxConstants.STYLE);
-                            String untranslatedIconUri = row
-                                    .getString(ComboBoxConstants.ICON);
-                            getWidget().currentSuggestions
-                                    .add(getWidget().new ComboBoxSuggestion(key,
-                                            caption, style,
-                                            untranslatedIconUri));
-                        }
-                    }
-                    getWidget().totalMatches = getDataSource().size()
-                            + (getState().emptySelectionAllowed ? 1 : 0);
-
-                    getDataReceivedHandler().dataReceived();
-                });
+                .addDataChangeHandler(new PagedDataChangeHandler(dataSource));
     }
 
     @Override
@@ -334,5 +288,143 @@ public class ComboBoxConnector extends AbstractListingConnector
     @Override
     public boolean isRequiredIndicatorVisible() {
         return getState().required && !isReadOnly();
+    }
+
+    private void refreshData() {
+        updateCurrentPage();
+
+        int start = getWidget().currentPage * getWidget().pageLength;
+        int end = getWidget().pageLength > 0 ? start + getWidget().pageLength
+                : getDataSource().size();
+
+        getWidget().currentSuggestions.clear();
+
+        if (getWidget().getNullSelectionItemShouldBeVisible()) {
+            // add special null selection item...
+            if (isFirstPage()) {
+                addEmptySelectionItem();
+            } else {
+                // ...or leave space for it
+                start = start - 1;
+            }
+            // in either case, the last item to show is
+            // shifted by one, unless no paging is used
+            if (getState().pageLength != 0) {
+                end = end - 1;
+            }
+        }
+
+        updateSuggestions(start, end);
+        getWidget().setTotalSuggestions(getDataSource().size());
+
+        getDataReceivedHandler().dataReceived();
+    }
+
+    private void updateSuggestions(int start, int end) {
+        for (int i = start; i < end; ++i) {
+            JsonObject row = getDataSource().getRow(i);
+            if (row != null) {
+                String key = getRowKey(row);
+                String caption = row.getString(DataCommunicatorConstants.NAME);
+                String style = row.getString(ComboBoxConstants.STYLE);
+                String untranslatedIconUri = row
+                        .getString(ComboBoxConstants.ICON);
+                ComboBoxSuggestion suggestion = getWidget().new ComboBoxSuggestion(
+                        key, caption, style, untranslatedIconUri);
+                getWidget().currentSuggestions.add(suggestion);
+            } else {
+                // there is not enough options to fill the page
+                return;
+            }
+        }
+    }
+
+    private boolean isFirstPage() {
+        return getWidget().currentPage == 0;
+    }
+
+    private void addEmptySelectionItem() {
+        if (isFirstPage()) {
+            getWidget().currentSuggestions.add(0,
+                    getWidget().new ComboBoxSuggestion("",
+                            getState().emptySelectionCaption, null, null));
+        }
+    }
+
+    private void updateCurrentPage() {
+        // try to find selected item if requested
+        if (getState().scrollToSelectedItem && getState().pageLength > 0
+                && getWidget().currentPage < 0
+                && getWidget().selectedOptionKey != null) {
+            // search for the item with the selected key
+            getWidget().currentPage = 0;
+            for (int i = 0; i < getDataSource().size(); ++i) {
+                JsonObject row = getDataSource().getRow(i);
+                if (row != null) {
+                    String key = getRowKey(row);
+                    if (getWidget().selectedOptionKey.equals(key)) {
+                        if (getWidget().nullSelectionAllowed) {
+                            getWidget().currentPage = (i + 1)
+                                    / getState().pageLength;
+                        } else {
+                            getWidget().currentPage = i / getState().pageLength;
+                        }
+                        break;
+                    }
+                }
+            }
+        } else if (getWidget().currentPage < 0) {
+            getWidget().currentPage = 0;
+        }
+    }
+
+    private static final Logger LOGGER = Logger
+            .getLogger(ComboBoxConnector.class.getName());
+
+    private class PagedDataChangeHandler implements DataChangeHandler {
+
+        private final DataSource<?> dataSource;
+
+        public PagedDataChangeHandler(DataSource<?> dataSource) {
+            this.dataSource = dataSource;
+        }
+
+        @Override
+        public void dataUpdated(int firstRowIndex, int numberOfRows) {
+            // NOOP since dataAvailable is always triggered afterwards
+        }
+
+        @Override
+        public void dataRemoved(int firstRowIndex, int numberOfRows) {
+            // NOOP since dataAvailable is always triggered afterwards
+        }
+
+        @Override
+        public void dataAdded(int firstRowIndex, int numberOfRows) {
+            // NOOP since dataAvailable is always triggered afterwards
+        }
+
+        @Override
+        public void dataAvailable(int firstRowIndex, int numberOfRows) {
+            refreshData();
+        }
+
+        @Override
+        public void resetDataAndSize(int estimatedNewDataSize) {
+            if (getState().pageLength == 0) {
+                if (getWidget().suggestionPopup.isShowing()) {
+                    dataSource.ensureAvailability(0, estimatedNewDataSize);
+                }
+                // else lets just wait till the popup is opened before
+                // everything is fetched to it. this could be optimized later on
+                // to fetch everything if in-memory data is used.
+            } else {
+                // reset data: clear any current options, set page to 0
+                getWidget().currentPage = 0;
+                getWidget().currentSuggestions.clear();
+                dataSource.ensureAvailability(0, getState().pageLength);
+            }
+        }
+
     }
 }

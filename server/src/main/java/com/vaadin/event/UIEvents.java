@@ -39,6 +39,7 @@ public interface UIEvents {
      * @since 7.2
      * @author Vaadin Ltd
      */
+    @FunctionalInterface
     public interface PollListener extends Serializable {
         public static final Method POLL_METHOD = ReflectTools
                 .findMethod(PollListener.class, "poll", PollEvent.class);
@@ -103,6 +104,7 @@ public interface UIEvents {
          * @param listener
          *            the {@link PollListener} to add, not null
          * @return a registration object for removing the listener
+         * @since 8.0
          */
         public Registration addPollListener(PollListener listener);
 

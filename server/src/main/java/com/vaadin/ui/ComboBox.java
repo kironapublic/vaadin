@@ -17,12 +17,23 @@
 package com.vaadin.ui;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
+import java.util.Set;
+import java.util.stream.Stream;
 
+import org.jsoup.nodes.Element;
+
+import com.vaadin.data.HasFilterableDataProvider;
 import com.vaadin.data.HasValue;
+import com.vaadin.data.provider.CallbackDataProvider;
+import com.vaadin.data.provider.DataCommunicator;
+import com.vaadin.data.provider.DataKeyMapper;
+import com.vaadin.data.provider.DataProvider;
+import com.vaadin.data.provider.ListDataProvider;
 import com.vaadin.event.FieldEvents;
 import com.vaadin.event.FieldEvents.BlurEvent;
 import com.vaadin.event.FieldEvents.BlurListener;
@@ -32,15 +43,20 @@ import com.vaadin.event.FieldEvents.FocusListener;
 import com.vaadin.server.KeyMapper;
 import com.vaadin.server.Resource;
 import com.vaadin.server.ResourceReference;
-import com.vaadin.server.data.DataCommunicator;
-import com.vaadin.server.data.DataKeyMapper;
-import com.vaadin.server.data.DataSource;
+import com.vaadin.server.SerializableBiPredicate;
+import com.vaadin.server.SerializableConsumer;
+import com.vaadin.server.SerializableFunction;
+import com.vaadin.server.SerializableToIntFunction;
 import com.vaadin.shared.Registration;
 import com.vaadin.shared.data.DataCommunicatorConstants;
 import com.vaadin.shared.ui.combobox.ComboBoxConstants;
 import com.vaadin.shared.ui.combobox.ComboBoxServerRpc;
 import com.vaadin.shared.ui.combobox.ComboBoxState;
+import com.vaadin.ui.declarative.DesignAttributeHandler;
+import com.vaadin.ui.declarative.DesignContext;
+import com.vaadin.ui.declarative.DesignFormatter;
 
+import elemental.json.Json;
 import elemental.json.JsonObject;
 
 /**
@@ -52,28 +68,86 @@ import elemental.json.JsonObject;
  * @author Vaadin Ltd
  */
 @SuppressWarnings("serial")
-public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
-        FieldEvents.BlurNotifier, FieldEvents.FocusNotifier {
+public class ComboBox<T> extends AbstractSingleSelect<T>
+        implements HasValue<T>, FieldEvents.BlurNotifier,
+        FieldEvents.FocusNotifier, HasFilterableDataProvider<T, String> {
+
+    /**
+     * A callback method for fetching items. The callback is provided with a
+     * non-null string filter, offset index and limit.
+     *
+     * @param <T>
+     *            item (bean) type in ComboBox
+     * @since 8.0
+     */
+    @FunctionalInterface
+    public interface FetchItemsCallback<T> extends Serializable {
+
+        /**
+         * Returns a stream of items that match the given filter, limiting the
+         * results with given offset and limit.
+         * <p>
+         * This method is called after the size of the data set is asked from a
+         * related size callback. The offset and limit are promised to be within
+         * the size of the data set.
+         *
+         * @param filter
+         *            a non-null filter string
+         * @param offset
+         *            the first index to fetch
+         * @param limit
+         *            the fetched item count
+         * @return stream of items
+         */
+        public Stream<T> fetchItems(String filter, int offset, int limit);
+    }
 
     /**
      * Handler that adds a new item based on user input when the new items
      * allowed mode is active.
+     *
+     * @since 8.0
      */
     @FunctionalInterface
-    public interface NewItemHandler extends Consumer<String>, Serializable {
+    public interface NewItemHandler extends SerializableConsumer<String> {
     }
 
     /**
-     * Filter can be used to customize the filtering of items based on user
-     * input.
+     * Item style generator class for declarative support.
+     * <p>
+     * Provides a straightforward mapping between an item and its style.
      *
-     * @see ComboBox#setFilter(ItemFilter)
      * @param <T>
-     *            item type in the combo box
+     *            item type
+     * @since 8.0
      */
-    @FunctionalInterface
-    public interface ItemFilter<T>
-            extends BiFunction<String, T, Boolean>, Serializable {
+    protected static class DeclarativeStyleGenerator<T>
+            implements StyleGenerator<T> {
+
+        private StyleGenerator<T> fallback;
+        private Map<T, String> styles = new HashMap<>();
+
+        public DeclarativeStyleGenerator(StyleGenerator<T> fallback) {
+            this.fallback = fallback;
+        }
+
+        @Override
+        public String apply(T item) {
+            return styles.containsKey(item) ? styles.get(item)
+                    : fallback.apply(item);
+        }
+
+        /**
+         * Sets a {@code style} for the {@code item}.
+         *
+         * @param item
+         *            a data item
+         * @param style
+         *            a style for the {@code item}
+         */
+        protected void setStyle(T item, String style) {
+            styles.put(item, style);
+        }
     }
 
     private ComboBoxServerRpc rpc = new ComboBoxServerRpc() {
@@ -83,48 +157,32 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
             if (getNewItemHandler() != null && itemValue != null
                     && itemValue.length() > 0) {
                 getNewItemHandler().accept(itemValue);
-                // rebuild list
-                filterstring = null;
             }
         }
 
         @Override
         public void setFilter(String filterText) {
-            filterstring = filterText;
-            if (filterText != null) {
-                getDataCommunicator().setInMemoryFilter(
-                        item -> filter.apply(filterstring, item));
-            } else {
-                getDataCommunicator().setInMemoryFilter(null);
-            }
+            currentFilterText = filterText;
+            filterSlot.accept(filterText);
         }
     };
-
-    private String filterstring;
 
     /**
      * Handler for new items entered by the user.
      */
     private NewItemHandler newItemHandler;
 
-    private ItemCaptionGenerator<T> itemCaptionGenerator = String::valueOf;
-
     private StyleGenerator<T> itemStyleGenerator = item -> null;
-    private IconGenerator<T> itemIconGenerator = item -> null;
 
-    private ItemFilter<T> filter = (filterText, item) -> {
-        if (filterText == null) {
-            return true;
-        } else {
-            return getItemCaptionGenerator().apply(item)
-                    .toLowerCase(getLocale())
-                    .contains(filterText.toLowerCase(getLocale()));
-        }
+    private String currentFilterText;
+
+    private SerializableConsumer<String> filterSlot = filter -> {
+        // Just ignore when neither setDataProvider nor setItems has been called
     };
 
     /**
      * Constructs an empty combo box without a caption. The content of the combo
-     * box can be set with {@link #setDataSource(DataSource)} or
+     * box can be set with {@link #setDataProvider(DataProvider)} or
      * {@link #setItems(Collection)}
      */
     public ComboBox() {
@@ -146,7 +204,7 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
 
     /**
      * Constructs an empty combo box, whose content can be set with
-     * {@link #setDataSource(DataSource)} or {@link #setItems(Collection)}.
+     * {@link #setDataProvider(DataProvider)} or {@link #setItems(Collection)}.
      *
      * @param caption
      *            the caption to show in the containing layout, null for no
@@ -158,8 +216,8 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
     }
 
     /**
-     * Constructs a combo box with a static in-memory data source with the given
-     * options.
+     * Constructs a combo box with a static in-memory data provider with the
+     * given options.
      *
      * @param caption
      *            the caption to show in the containing layout, null for no
@@ -168,21 +226,9 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
      *            collection of options, not null
      */
     public ComboBox(String caption, Collection<T> options) {
-        this(caption, DataSource.create(options));
-    }
-
-    /**
-     * Constructs a combo box with the given data source.
-     *
-     * @param caption
-     *            the caption to show in the containing layout, null for no
-     *            caption
-     * @param dataSource
-     *            the data source to use, not null
-     */
-    public ComboBox(String caption, DataSource<T> dataSource) {
         this(caption);
-        setDataSource(dataSource);
+
+        setItems(options);
     }
 
     /**
@@ -194,13 +240,16 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
         registerRpc(new FocusAndBlurServerRpcDecorator(this, this::fireEvent));
 
         addDataGenerator((T data, JsonObject jsonObject) -> {
-            jsonObject.put(DataCommunicatorConstants.NAME,
-                    getItemCaptionGenerator().apply(data));
+            String caption = getItemCaptionGenerator().apply(data);
+            if (caption == null) {
+                caption = "";
+            }
+            jsonObject.put(DataCommunicatorConstants.NAME, caption);
             String style = itemStyleGenerator.apply(data);
             if (style != null) {
                 jsonObject.put(ComboBoxConstants.STYLE, style);
             }
-            Resource icon = itemIconGenerator.apply(data);
+            Resource icon = getItemIconGenerator().apply(data);
             if (icon != null) {
                 String iconUrl = ResourceReference
                         .create(icon, ComboBox.this, null).getURL();
@@ -210,11 +259,135 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
     }
 
     /**
+     * {@inheritDoc}
+     * <p>
+     * Filtering will use a case insensitive match to show all items where the
+     * filter text is a substring of the caption displayed for that item.
+     */
+    @Override
+    public void setItems(Collection<T> items) {
+        ListDataProvider<T> listDataProvider = DataProvider.ofCollection(items);
+
+        setDataProvider(listDataProvider);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Filtering will use a case insensitive match to show all items where the
+     * filter text is a substring of the caption displayed for that item.
+     */
+    @Override
+    public void setItems(Stream<T> streamOfItems) {
+        // Overridden only to add clarification to javadocs
+        super.setItems(streamOfItems);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Filtering will use a case insensitive match to show all items where the
+     * filter text is a substring of the caption displayed for that item.
+     */
+    @Override
+    public void setItems(T... items) {
+        // Overridden only to add clarification to javadocs
+        super.setItems(items);
+    }
+
+    /**
+     * Sets a list data provider as the data provider of this combo box.
+     * Filtering will use a case insensitive match to show all items where the
+     * filter text is a substring of the caption displayed for that item.
+     * <p>
+     * Note that this is a shorthand that calls
+     * {@link #setDataProvider(DataProvider)} with a wrapper of the provided
+     * list data provider. This means that {@link #getDataProvider()} will
+     * return the wrapper instead of the original list data provider.
+     *
+     * @param listDataProvider
+     *            the list data provider to use, not <code>null</code>
+     * @since 8.0
+     */
+    public void setDataProvider(ListDataProvider<T> listDataProvider) {
+        // Cannot use the case insensitive contains shorthand from
+        // ListDataProvider since it wouldn't react to locale changes
+        CaptionFilter defaultCaptionFilter = (itemText, filterText) -> itemText
+                .toLowerCase(getLocale())
+                .contains(filterText.toLowerCase(getLocale()));
+
+        setDataProvider(defaultCaptionFilter, listDataProvider);
+    }
+
+    /**
+     * Sets the data items of this listing and a simple string filter with which
+     * the item string and the text the user has input are compared.
+     * <p>
+     * Note that unlike {@link #setItems(Collection)}, no automatic case
+     * conversion is performed before the comparison.
+     *
+     * @param captionFilter
+     *            filter to check if an item is shown when user typed some text
+     *            into the ComboBox
+     * @param items
+     *            the data items to display
+     * @since 8.0
+     */
+    public void setItems(CaptionFilter captionFilter, Collection<T> items) {
+        ListDataProvider<T> listDataProvider = DataProvider.ofCollection(items);
+
+        setDataProvider(captionFilter, listDataProvider);
+    }
+
+    /**
+     * Sets a list data provider with an item caption filter as the data
+     * provider of this combo box. The caption filter is used to compare the
+     * displayed caption of each item to the filter text entered by the user.
+     *
+     * @param captionFilter
+     *            filter to check if an item is shown when user typed some text
+     *            into the ComboBox
+     * @param listDataProvider
+     *            the list data provider to use, not <code>null</code>
+     * @since 8.0
+     */
+    public void setDataProvider(CaptionFilter captionFilter,
+            ListDataProvider<T> listDataProvider) {
+        Objects.requireNonNull(listDataProvider,
+                "List data provider cannot be null");
+
+        // Must do getItemCaptionGenerator() for each operation since it might
+        // not be the same as when this method was invoked
+        setDataProvider(listDataProvider, filterText -> item -> captionFilter
+                .test(getItemCaptionGenerator().apply(item), filterText));
+    }
+
+    /**
+     * Sets the data items of this listing and a simple string filter with which
+     * the item string and the text the user has input are compared.
+     * <p>
+     * Note that unlike {@link #setItems(Collection)}, no automatic case
+     * conversion is performed before the comparison.
+     *
+     * @param captionFilter
+     *            filter to check if an item is shown when user typed some text
+     *            into the ComboBox
+     * @param items
+     *            the data items to display
+     * @since 8.0
+     */
+    public void setItems(CaptionFilter captionFilter,
+            @SuppressWarnings("unchecked") T... items) {
+        setItems(captionFilter, Arrays.asList(items));
+    }
+
+    /**
      * Gets the current placeholder text shown when the combo box would be
      * empty.
      *
      * @see #setPlaceholder(String)
      * @return the current placeholder string, or null if not enabled
+     * @since 8.0
      */
     public String getPlaceholder() {
         return getState(false).placeholder;
@@ -226,6 +399,7 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
      *
      * @param placeholder
      *            the desired placeholder, or null to disable
+     * @since 8.0
      */
     public void setPlaceholder(String placeholder) {
         getState().placeholder = placeholder;
@@ -249,9 +423,9 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
 
     /**
      * Returns true if the user can enter text into the field to either filter
-     * the selections or enter a new value if {@link #isNewItemsAllowed()}
-     * returns true. If text input is disabled, the comboBox will work in the
-     * same way as a {@link NativeSelect}
+     * the selections or enter a new value if new item handler is set (see
+     * {@link #setNewItemHandler(NewItemHandler)}. If text input is disabled,
+     * the comboBox will work in the same way as a {@link NativeSelect}
      *
      * @return true if text input is allowed
      */
@@ -261,30 +435,14 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
 
     @Override
     public Registration addBlurListener(BlurListener listener) {
-        addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
+        return addListener(BlurEvent.EVENT_ID, BlurEvent.class, listener,
                 BlurListener.blurMethod);
-        return () -> removeListener(BlurEvent.EVENT_ID, BlurEvent.class,
-                listener);
-    }
-
-    @Override
-    @Deprecated
-    public void removeBlurListener(BlurListener listener) {
-        removeListener(BlurEvent.EVENT_ID, BlurEvent.class, listener);
     }
 
     @Override
     public Registration addFocusListener(FocusListener listener) {
-        addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
+        return addListener(FocusEvent.EVENT_ID, FocusEvent.class, listener,
                 FocusListener.focusMethod);
-        return () -> removeListener(FocusEvent.EVENT_ID, FocusEvent.class,
-                listener);
-    }
-
-    @Override
-    @Deprecated
-    public void removeFocusListener(FocusListener listener) {
-        removeListener(FocusEvent.EVENT_ID, FocusEvent.class, listener);
     }
 
     /**
@@ -297,7 +455,8 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
     }
 
     /**
-     * Returns the suggestion pop-up's width as a CSS string.
+     * Returns the suggestion pop-up's width as a CSS string. By default this
+     * width is set to "100%".
      *
      * @see #setPopupWidth
      * @since 7.7
@@ -322,6 +481,7 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
      * Returns whether the user is allowed to select nothing in the combo box.
      *
      * @return true if empty selection is allowed, false otherwise
+     * @since 8.0
      */
     public boolean isEmptySelectionAllowed() {
         return getState(false).emptySelectionAllowed;
@@ -334,15 +494,57 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
      * @param emptySelectionAllowed
      *            true to allow not selecting anything, false to require
      *            selection
+     * @since 8.0
      */
     public void setEmptySelectionAllowed(boolean emptySelectionAllowed) {
         getState().emptySelectionAllowed = emptySelectionAllowed;
     }
 
     /**
+     * Returns the empty selection caption.
+     * <p>
+     * The empty string {@code ""} is the default empty selection caption.
+     *
+     * @see #setEmptySelectionAllowed(boolean)
+     * @see #isEmptySelectionAllowed()
+     * @see #setEmptySelectionCaption(String)
+     * @see #isSelected(Object)
+     *
+     * @return the empty selection caption, not {@code null}
+     * @since 8.0
+     */
+    public String getEmptySelectionCaption() {
+        return getState(false).emptySelectionCaption;
+    }
+
+    /**
+     * Sets the empty selection caption.
+     * <p>
+     * The empty string {@code ""} is the default empty selection caption.
+     * <p>
+     * If empty selection is allowed via the
+     * {@link #setEmptySelectionAllowed(boolean)} method (it is by default) then
+     * the empty item will be shown with the given caption.
+     *
+     * @param caption
+     *            the caption to set, not {@code null}
+     * @see #isSelected(Object)
+     * @since 8.0
+     */
+    public void setEmptySelectionCaption(String caption) {
+        Objects.nonNull(caption);
+        getState().emptySelectionCaption = caption;
+    }
+
+    /**
      * Sets the suggestion pop-up's width as a CSS string. By using relative
      * units (e.g. "50%") it's possible to set the popup's width relative to the
      * ComboBox itself.
+     * <p>
+     * By default this width is set to "100%" so that the pop-up's width is
+     * equal to the width of the combobox. By setting width to null the pop-up's
+     * width will automatically expand beyond 100% relative width to fit the
+     * content of all displayed items.
      *
      * @see #getPopupWidth()
      * @since 7.7
@@ -356,7 +558,7 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
     /**
      * Sets whether to scroll the selected item visible (directly open the page
      * on which it is) when opening the combo box popup or not.
-     *
+     * <p>
      * This requires finding the index of the item, which can be expensive in
      * many large lazy loading containers.
      *
@@ -381,30 +583,18 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
         return getState(false).scrollToSelectedItem;
     }
 
-    /**
-     * Gets the item caption generator that is used to produce the strings shown
-     * in the combo box for each item.
-     *
-     * @return the item caption generator used, not null
-     */
+    @Override
     public ItemCaptionGenerator<T> getItemCaptionGenerator() {
-        return itemCaptionGenerator;
+        return super.getItemCaptionGenerator();
     }
 
-    /**
-     * Sets the item caption generator that is used to produce the strings shown
-     * in the combo box for each item. By default,
-     * {@link String#valueOf(Object)} is used.
-     *
-     * @param itemCaptionGenerator
-     *            the item caption provider to use, not null
-     */
+    @Override
     public void setItemCaptionGenerator(
             ItemCaptionGenerator<T> itemCaptionGenerator) {
-        Objects.requireNonNull(itemCaptionGenerator,
-                "Item caption generators must not be null");
-        this.itemCaptionGenerator = itemCaptionGenerator;
-        getDataCommunicator().reset();
+        super.setItemCaptionGenerator(itemCaptionGenerator);
+        if (getSelectedItem().isPresent()) {
+            updateSelectedItemCaption();
+        }
     }
 
     /**
@@ -419,6 +609,7 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
      *            the item style generator to set, not null
      * @throws NullPointerException
      *             if {@code itemStyleGenerator} is {@code null}
+     * @since 8.0
      */
     public void setStyleGenerator(StyleGenerator<T> itemStyleGenerator) {
         Objects.requireNonNull(itemStyleGenerator,
@@ -436,41 +627,24 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
      * @see #setStyleGenerator(StyleGenerator)
      *
      * @return the currently used item style generator, not null
+     * @since 8.0
      */
     public StyleGenerator<T> getStyleGenerator() {
         return itemStyleGenerator;
     }
 
-    /**
-     * Sets the item icon generator that is used to produce custom icons for
-     * showing items in the popup. The generator can return null for items with
-     * no icon.
-     *
-     * @see IconGenerator
-     *
-     * @param itemIconGenerator
-     *            the item icon generator to set, not null
-     * @throws NullPointerException
-     *             if {@code itemIconGenerator} is {@code null}
-     */
+    @Override
     public void setItemIconGenerator(IconGenerator<T> itemIconGenerator) {
-        Objects.requireNonNull(itemIconGenerator,
-                "Item icon generator must not be null");
-        this.itemIconGenerator = itemIconGenerator;
-        getDataCommunicator().reset();
+        super.setItemIconGenerator(itemIconGenerator);
+
+        if (getSelectedItem().isPresent()) {
+            updateSelectedItemIcon();
+        }
     }
 
-    /**
-     * Gets the currently used item icon generator. The default item icon
-     * provider returns null for all items, resulting in no icons being used.
-     *
-     * @see IconGenerator
-     * @see #setItemIconGenerator(IconGenerator)
-     *
-     * @return the currently used item icon generator, not null
-     */
+    @Override
     public IconGenerator<T> getItemIconGenerator() {
-        return itemIconGenerator;
+        return super.getItemIconGenerator();
     }
 
     /**
@@ -480,16 +654,17 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
      * @param newItemHandler
      *            handler called for new items, null to only permit the
      *            selection of existing items
+     * @since 8.0
      */
     public void setNewItemHandler(NewItemHandler newItemHandler) {
         this.newItemHandler = newItemHandler;
-        getState().allowNewItems = (newItemHandler != null);
+        getState().allowNewItems = newItemHandler != null;
         markAsDirty();
     }
 
     /**
      * Returns the handler called when the user enters a new item (not present
-     * in the data source).
+     * in the data provider).
      *
      * @return new item handler or null if none specified
      */
@@ -499,34 +674,12 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
 
     // HasValue methods delegated to the selection model
 
-    /**
-     * Returns the filter used to customize the list based on user input.
-     *
-     * @return the current filter, not null
-     */
-    public ItemFilter<T> getFilter() {
-        return filter;
-    }
-
-    /**
-     * Sets the filter used to customize the list based on user input. The
-     * default filter checks case-insensitively that the input string is
-     * contained in the item caption.
-     *
-     * @param filter
-     *            the filter function to use, not null
-     */
-    public void setFilter(ItemFilter<T> filter) {
-        Objects.requireNonNull(filter, "Item filter must not be null");
-        this.filter = filter;
-    }
-
     @Override
     public Registration addValueChangeListener(
             HasValue.ValueChangeListener<T> listener) {
         return addSelectionListener(event -> {
-            listener.accept(new ValueChangeEvent<>(event.getComponent(), this,
-                    event.isUserOriginated()));
+            listener.valueChange(new ValueChangeEvent<>(event.getComponent(),
+                    this, event.getOldValue(), event.isUserOriginated()));
         });
     }
 
@@ -544,12 +697,179 @@ public class ComboBox<T> extends AbstractSingleSelect<T> implements HasValue<T>,
     protected void doSetSelectedKey(String key) {
         super.doSetSelectedKey(key);
 
+        updateSelectedItemCaption();
+        updateSelectedItemIcon();
+    }
+
+    private void updateSelectedItemCaption() {
         String selectedCaption = null;
-        T value = getDataCommunicator().getKeyMapper().get(key);
+        T value = getDataCommunicator().getKeyMapper().get(getSelectedKey());
         if (value != null) {
             selectedCaption = getItemCaptionGenerator().apply(value);
         }
         getState().selectedItemCaption = selectedCaption;
     }
 
+    private void updateSelectedItemIcon() {
+        String selectedItemIcon = null;
+        T value = getDataCommunicator().getKeyMapper().get(getSelectedKey());
+        if (value != null) {
+            Resource icon = getItemIconGenerator().apply(value);
+            if (icon != null) {
+                selectedItemIcon = ResourceReference
+                        .create(icon, ComboBox.this, null).getURL();
+            }
+        }
+        getState().selectedItemIcon = selectedItemIcon;
+    }
+
+    @Override
+    protected Element writeItem(Element design, T item, DesignContext context) {
+        Element element = design.appendElement("option");
+
+        String caption = getItemCaptionGenerator().apply(item);
+        if (caption != null) {
+            element.html(DesignFormatter.encodeForTextNode(caption));
+        } else {
+            element.html(DesignFormatter.encodeForTextNode(item.toString()));
+        }
+        element.attr("item", item.toString());
+
+        Resource icon = getItemIconGenerator().apply(item);
+        if (icon != null) {
+            DesignAttributeHandler.writeAttribute("icon", element.attributes(),
+                    icon, null, Resource.class, context);
+        }
+
+        String style = getStyleGenerator().apply(item);
+        if (style != null) {
+            element.attr("style", style);
+        }
+
+        if (isSelected(item)) {
+            element.attr("selected", "");
+        }
+
+        return element;
+    }
+
+    @Override
+    protected void readItems(Element design, DesignContext context) {
+        setStyleGenerator(new DeclarativeStyleGenerator<>(getStyleGenerator()));
+        super.readItems(design, context);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    protected T readItem(Element child, Set<T> selected,
+            DesignContext context) {
+        T item = super.readItem(child, selected, context);
+
+        if (child.hasAttr("style")) {
+            StyleGenerator<T> styleGenerator = getStyleGenerator();
+            if (styleGenerator instanceof DeclarativeStyleGenerator) {
+                ((DeclarativeStyleGenerator) styleGenerator).setStyle(item,
+                        child.attr("style"));
+            } else {
+                throw new IllegalStateException(String.format(
+                        "Don't know how "
+                                + "to set style using current style generator '%s'",
+                        styleGenerator.getClass().getName()));
+            }
+        }
+        return item;
+    }
+
+    @Override
+    public DataProvider<T, ?> getDataProvider() {
+        return internalGetDataProvider();
+    }
+
+    @Override
+    public <C> void setDataProvider(DataProvider<T, C> dataProvider,
+            SerializableFunction<String, C> filterConverter) {
+        Objects.requireNonNull(dataProvider, "dataProvider cannot be null");
+        Objects.requireNonNull(filterConverter,
+                "filterConverter cannot be null");
+
+        SerializableFunction<String, C> convertOrNull = filterText -> {
+            if (filterText == null || filterText.isEmpty()) {
+                return null;
+            }
+
+            return filterConverter.apply(filterText);
+        };
+
+        SerializableConsumer<C> providerFilterSlot = internalSetDataProvider(
+                dataProvider, convertOrNull.apply(currentFilterText));
+
+        filterSlot = filter -> providerFilterSlot
+                .accept(convertOrNull.apply(filter));
+    }
+
+    /**
+     * Sets a CallbackDataProvider using the given fetch items callback and a
+     * size callback.
+     * <p>
+     * This method is a shorthand for making a {@link CallbackDataProvider} that
+     * handles a partial {@link Query} object.
+     *
+     * @param fetchItems
+     *            a callback for fetching items
+     * @param sizeCallback
+     *            a callback for getting the count of items
+     *
+     * @see CallbackDataProvider
+     * @see #setDataProvider(DataProvider)
+     */
+    public void setDataProvider(FetchItemsCallback<T> fetchItems,
+            SerializableToIntFunction<String> sizeCallback) {
+        setDataProvider(new CallbackDataProvider<>(
+                q -> fetchItems.fetchItems(q.getFilter().orElse(""),
+                        q.getOffset(), q.getLimit()),
+                q -> sizeCallback.applyAsInt(q.getFilter().orElse(""))));
+    }
+
+    @Override
+    protected void setSelectedFromClient(String key) {
+        super.setSelectedFromClient(key);
+
+        /*
+         * The client side for combo box always expects a state change for
+         * selectedItemKey after it has sent a selection change. This means that
+         * we must store a value in the diffstate that guarantees that a new
+         * value will be sent, regardless of what the value actually is at the
+         * time when changes are sent.
+         *
+         * Keys are always strings (or null), so using a non-string type will
+         * always trigger a diff mismatch and a resend.
+         */
+        updateDiffstate("selectedItemKey", Json.create(0));
+    }
+
+    /**
+     * Predicate to check {@link ComboBox} item captions against user typed
+     * strings.
+     *
+     * @see #setItems(CaptionFilter, Collection)
+     * @see #setItems(CaptionFilter, Object[])
+     * @since 8.0
+     */
+    @FunctionalInterface
+    public interface CaptionFilter
+            extends SerializableBiPredicate<String, String> {
+
+        /**
+         * Check item caption against entered text.
+         *
+         * @param itemCaption
+         *            the caption of the item to filter, not {@code null}
+         * @param filterText
+         *            user entered filter, not {@code null}
+         * @return {@code true} if item passes the filter and should be listed,
+         *         {@code false} otherwise
+         */
+        @Override
+        public boolean test(String itemCaption, String filterText);
+    }
 }

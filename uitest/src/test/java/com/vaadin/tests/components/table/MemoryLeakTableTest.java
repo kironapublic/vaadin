@@ -24,7 +24,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 
-import com.vaadin.testbench.customelements.TableElement;
+import com.vaadin.testbench.elements.TableElement;
 import com.vaadin.testbench.elements.ButtonElement;
 import com.vaadin.tests.tb3.MultiBrowserTest;
 
@@ -86,7 +86,7 @@ public class MemoryLeakTableTest extends MultiBrowserTest {
     private void scrollTable(TableElement tbl, int value) {
         WebElement actualElement = tbl
                 .findElement(By.className("v-table-body-wrapper"));
-        JavascriptExecutor js = tbl.getCommandExecutor();
+        JavascriptExecutor js = (JavascriptExecutor) getDriver();
         js.executeScript("arguments[0].scrollTop = " + value, actualElement);
     }
 }

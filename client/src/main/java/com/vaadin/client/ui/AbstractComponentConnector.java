@@ -48,6 +48,8 @@ import com.vaadin.client.VConsole;
 import com.vaadin.client.WidgetUtil;
 import com.vaadin.client.annotations.OnStateChange;
 import com.vaadin.client.communication.StateChangeEvent;
+import com.vaadin.client.extensions.DragSourceExtensionConnector;
+import com.vaadin.client.extensions.DropTargetExtensionConnector;
 import com.vaadin.client.metadata.NoDataException;
 import com.vaadin.client.metadata.Type;
 import com.vaadin.client.metadata.TypeData;
@@ -60,6 +62,7 @@ import com.vaadin.shared.EventId;
 import com.vaadin.shared.MouseEventDetails;
 import com.vaadin.shared.ui.ComponentStateUtil;
 import com.vaadin.shared.ui.TabIndexState;
+import com.vaadin.shared.ui.ui.UIState;
 
 public abstract class AbstractComponentConnector extends AbstractConnector
         implements ComponentConnector, HasErrorIndicator {
@@ -208,10 +211,9 @@ public abstract class AbstractComponentConnector extends AbstractConnector
 
                     @Override
                     public void run() {
-                        cancelParentTouchTimers(); // we're handling this event,
-                                                   // our parent components
-                                                   // don't need to bother with
-                                                   // it anymore.
+                        // we're handling this event, our parent components
+                        // don't need to bother with it anymore.
+                        cancelParentTouchTimers();
                         // The default context click
                         // implementation only provides the
                         // mouse coordinates relative to root
@@ -285,7 +287,7 @@ public abstract class AbstractComponentConnector extends AbstractConnector
     }
 
     protected boolean shouldHandleLongTap() {
-        return BrowserInfo.get().isTouchDevice() && !BrowserInfo.get().isIOS();
+        return BrowserInfo.get().isTouchDevice();
     }
 
     /**
@@ -437,6 +439,11 @@ public abstract class AbstractComponentConnector extends AbstractConnector
                 // + Util.getSimpleName(getWidget())
                 // + " which does not implement Focusable");
             }
+        } else if (getState() instanceof UIState
+                && getWidget() instanceof Focusable) {
+            // UI behaves like a component with TabIndexState
+            ((Focusable) getWidget())
+                    .setTabIndex(((UIState) getState()).tabIndex);
         }
         Profiler.leave(
                 "AbstractComponentConnector.onStateChanged update tab index");
@@ -700,7 +707,7 @@ public abstract class AbstractComponentConnector extends AbstractConnector
      * updated in another widget in addition to the one returned by the
      * <code>Connector</code>'s {@link #getWidget()}, or if the prefix should be
      * different. For example see
-     * {@link com.vaadin.client.ui.datefield.DateFieldConnector#setWidgetStyleNameWithPrefix(String, String, boolean)}
+     * {@link com.vaadin.client.ui.datefield.TextualDateConnector#setWidgetStyleNameWithPrefix(String, String, boolean)}
      * </p>
      *
      * @param styleName
@@ -755,7 +762,8 @@ public abstract class AbstractComponentConnector extends AbstractConnector
 
     @Override
     public TooltipInfo getTooltipInfo(Element element) {
-        return new TooltipInfo(getState().description, getState().errorMessage);
+        return new TooltipInfo(getState().description,
+                getState().descriptionContentMode, getState().errorMessage);
     }
 
     @Override
@@ -804,5 +812,67 @@ public abstract class AbstractComponentConnector extends AbstractConnector
     @Override
     public boolean isErrorIndicatorVisible() {
         return getState().errorMessage != null;
+    }
+
+    /**
+     * Invoked when a {@link DragSourceExtensionConnector} has been attached to
+     * this component.
+     * <p>
+     * By default, does nothing. If you need to apply some changes to the
+     * widget, override this method.
+     * <p>
+     * This is a framework internal method, and should not be invoked manually.
+     *
+     * @since 8.1
+     * @see #onDragSourceDetached()
+     */
+    public void onDragSourceAttached() {
+
+    }
+
+    /**
+     * Invoked when a {@link DragSourceExtensionConnector} has been removed from
+     * this component.
+     * <p>
+     * By default, does nothing.
+     * <p>
+     * This is a framework internal method, and should not be invoked manually.
+     *
+     * @since 8.1
+     * @see #onDragSourceAttached()
+     */
+    public void onDragSourceDetached() {
+
+    }
+
+    /**
+     * Invoked when a {@link DropTargetExtensionConnector} has been attached to
+     * this component.
+     * <p>
+     * By default, does nothing. If you need to apply some changes to the
+     * widget, override this method.
+     * <p>
+     * This is a framework internal method, and should not be invoked manually.
+     *
+     * @since 8.1
+     * @see #onDropTargetDetached()
+     */
+    public void onDropTargetAttached() {
+
+    }
+
+    /**
+     * Invoked when a {@link DropTargetExtensionConnector} has been removed from
+     * this component.
+     * <p>
+     * By default, does nothing.
+     * <p>
+     * This is a framework internal method, and should not be invoked manually.
+     *
+     * @since 8.1
+     * @see #onDropTargetAttached()
+     */
+    public void onDropTargetDetached() {
+
     }
 }

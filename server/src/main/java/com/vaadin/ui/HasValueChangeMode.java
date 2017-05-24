@@ -20,6 +20,8 @@ import com.vaadin.shared.ui.ValueChangeMode;
 
 /**
  * Implemented by components which support value change modes.
+ * 
+ * @since 8.0
  */
 public interface HasValueChangeMode extends Component {
     /**
@@ -57,12 +59,12 @@ public interface HasValueChangeMode extends Component {
 
     /**
      * Returns the currently set timeout, in milliseconds, for how often
-     * {@link ValueChangeEvent}s are triggered if the current {@link ValueChangeMode}
-     * is set to either {@link ValueChangeMode#LAZY} or
+     * {@link ValueChangeEvent}s are triggered if the current
+     * {@link ValueChangeMode} is set to either {@link ValueChangeMode#LAZY} or
      * {@link ValueChangeMode#TIMEOUT}.
      *
-     * @return the timeout in milliseconds of how often {@link ValueChangeEvent}s are
-     *         triggered.
+     * @return the timeout in milliseconds of how often
+     *         {@link ValueChangeEvent}s are triggered.
      */
     public int getValueChangeTimeout();
 
